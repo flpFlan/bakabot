@@ -1,0 +1,7 @@
+/.vs
+/.vscode
+/bakabot.pyproj
+/bakabot.sln
+/runtime
+/test
+/__pycache__
