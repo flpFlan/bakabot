@@ -9,14 +9,13 @@ from config import Bots, Endpoints
 
 
 async def start_bot():
-    default = {
-        "evt_host": "localhost",
-        "evt_port": 2333,
-        "api_host": "localhost",
-        "api_port": 2334,
-    }
+    default = {"event": "localhost:2333", "api": "localhost:2334"}
     for bot in Bots:
-        await bot.run(**Endpoints.get(bot.name, default))
+        evt = Endpoints.get(bot.name, default).get("event")
+        api = Endpoints.get(bot.name, default).get("api")
+
+        assert evt and api
+        await bot.run(evt, api)
 
 
 if __name__ == "__main__":

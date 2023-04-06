@@ -1,10 +1,10 @@
 # -- stdlib --
-from typing import Type
+from typing import Type, cast
 from re import RegexFlag
+from bot import Bot
 
 # -- third party --
 # -- own --
-from bot import Bot
 from config import Bots
 from service import all_services
 
@@ -21,7 +21,7 @@ class Service:
     excute_after: list
 
     def __init__(self, bot: Bot):
-        self.bot = bot
+        self.bot = bot = cast(Bot, bot)
 
     async def process(self) -> bool:
         ...  # to override it
