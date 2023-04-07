@@ -70,12 +70,11 @@ class CQHTTPAdapter:
 
         pt = rev.get("post_type")
         assert pt
-        tt = rev.get(pt + "_type", "")
-        st = rev.get("sub_type", "")
+        tt = rev.get(pt + "_type", " ")
+        st = rev.get("sub_type", " ")
 
         evt = all_events[pt][tt][st]()
         assert evt
 
         set_attr(evt, rev)
-
         return evt
