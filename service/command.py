@@ -14,10 +14,10 @@ class CommandCore(EventHandler):
     interested = [Message]
     entry = [r"(?<=^/cmd)(?:\s)*(?P<cmd>[\s\S]+)"]
 
-    async def handle(self, msg: Message):
-        ...
+    # async def handle(self, msg: Message):
+    # ...
 
-    async def process(self, evt: Message) -> bool:
+    async def handle(self, evt: Message) -> bool:
         qq = evt.user_id
         cmd = evt.message
         if not qq in Administrators:

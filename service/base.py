@@ -38,7 +38,7 @@ class PrivateMessageHandler(EventHandler):
 
 
 class Service:
-    service_on = False
+    service_on = True
     cores = []
 
     def __init__(self, bot):

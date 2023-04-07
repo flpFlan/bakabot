@@ -54,8 +54,9 @@ class Bot:
 
         from service.base import Service
 
+        services = self.services
+        self.services = [s(self) if not isinstance(s, Service) else s for s in services]
         for s in self.services:
-            s = s(self) if not isinstance(s, Service) else s
             await s.start()
 
         self.is_running = True
