@@ -1,4 +1,5 @@
-from events.base import CQHTTPEvent
+from cqhttp.events.base import CQHTTPEvent
+from cqhttp.events.base import register_to_events
 
 
 class Request(CQHTTPEvent):
@@ -6,6 +7,7 @@ class Request(CQHTTPEvent):
     request_type: str
 
 
+@register_to_events
 class FriendRequest(Request):
     """加好友请求"""
 
@@ -28,12 +30,14 @@ class GroupRequest(Request):
     flag: str
 
 
+@register_to_events
 class GroupAddRequest(GroupRequest):
     """加群请求"""
 
     sub_type = "add"
 
 
+@register_to_events
 class GroupInviteRequest(GroupRequest):
     """邀请登录号入群"""
 

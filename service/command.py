@@ -1,23 +1,25 @@
 # -- stdlib --
-import logging
-from typing import Mapping
 
 # -- third party --
 # -- own --
-from service import log
-from service.base import Service, register_to
 from config import Administrators
+from service.base import Service, log
+from service.base import EventHandler, register_to
+from cqhttp.events.message import Message
 
 # -- code --
 
 
-@register_to("ALL")
-class Command(Service):
-    category = ("message",)
-    interested = ("private", "group")
+class CommandCore(EventHandler):
+    interested = [Message]
     entry = [r"(?<=^/cmd)(?:\s)*(?P<cmd>[\s\S]+)"]
 
-    async def process(self, qq: int, cmd: str) -> bool:
+    async def handle(self, msg: Message):
+        ...
+
+    async def process(self, evt: Message) -> bool:
+        qq = evt.user_id
+        cmd = evt.message
         if not qq in Administrators:
             return False
         try:
@@ -27,5 +29,10 @@ class Command(Service):
             return False
         return True
 
-    def close(self):
+    async def close(self):
         log.warning("Command must be on")
+
+
+@register_to("ALL")
+class Command(Service):
+    cores = [CommandCore]

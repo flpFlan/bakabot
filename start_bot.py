@@ -9,13 +9,12 @@ from config import Bots, Endpoints
 
 
 async def start_bot():
-    default = {"event": "localhost:2333", "api": "localhost:2334"}
+    default = "localhost:2333"
     for bot in Bots:
-        evt = Endpoints.get(bot.name, default).get("event")
-        api = Endpoints.get(bot.name, default).get("api")
+        addr = Endpoints.get(bot.name, default)
 
-        assert evt and api
-        await bot.run(evt, api)
+        assert addr
+        await bot.run(addr)
 
 
 if __name__ == "__main__":

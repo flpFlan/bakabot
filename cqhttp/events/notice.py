@@ -1,4 +1,5 @@
-from events.base import CQHTTPEvent
+from cqhttp.events.base import CQHTTPEvent
+from cqhttp.events.base import register_to_events
 
 
 class Notice(CQHTTPEvent):
@@ -6,6 +7,7 @@ class Notice(CQHTTPEvent):
     notice_type: str
 
 
+@register_to_events
 class PrivateMessageRecalled(Notice):
     """私聊消息撤回"""
 
@@ -15,6 +17,7 @@ class PrivateMessageRecalled(Notice):
     message_id: int
 
 
+@register_to_events
 class GroupMessageRecalled(Notice):
     """群消息撤回"""
 
@@ -37,12 +40,14 @@ class GroupMemberIncreased(Notice):
     user_id: int
 
 
+@register_to_events
 class GroupMemberApproveIncreased(GroupMemberIncreased):
     """管理员已同意入群"""
 
     sub_type = "approve"
 
 
+@register_to_events
 class GroupMemberInviteIncreased(GroupMemberIncreased):
     """管理员邀请入群"""
 
@@ -60,18 +65,21 @@ class GroupMemberDecreased(Notice):
     user_id: int
 
 
+@register_to_events
 class GroupMemberLeaveDecreased(GroupMemberDecreased):
     """主动退群"""
 
     sub_type = "leave"
 
 
+@register_to_events
 class GroupMemberKickDecreased(GroupMemberDecreased):
     """成员被踢"""
 
     sub_type = "kick"
 
 
+@register_to_events
 class GroupMemberKickMeDecreased(GroupMemberDecreased):
     """登录号被踢"""
 
@@ -88,26 +96,35 @@ class GroupAdministratorChanged(Notice):
     user_id: int
 
 
+@register_to_events
 class GroupAdministratorSet(GroupAdministratorChanged):
     """设置管理员"""
 
     sub_type = "set"
 
 
+@register_to_events
 class GroupAdministratorUnset(GroupAdministratorChanged):
     """取消管理员"""
 
     sub_type = "unset"
 
 
+@register_to_events
 class GroupFileUploaded(Notice):
     """群文件上传"""
+
+    class File:
+        id: str
+        name: str
+        size: int
+        busid: int
 
     notice_type = "group_upload"
 
     group_id: int
     user_id: int
-    file: dict
+    file: File
 
 
 class GroupMemberBanOrLift(Notice):
@@ -122,18 +139,21 @@ class GroupMemberBanOrLift(Notice):
     duration: int
 
 
+@register_to_events
 class GroupMemberBanned(GroupMemberBanOrLift):
     """禁言"""
 
     sub_type = "ban"
 
 
+@register_to_events
 class GroupMemberLiftBan(GroupMemberBanOrLift):
     """解除禁言"""
 
     sub_type = "lift_ban"
 
 
+@register_to_events
 class FriendAdded(Notice):
     """好友添加"""
 
@@ -142,6 +162,7 @@ class FriendAdded(Notice):
     user_id: int
 
 
+@register_to_events
 class PrivatePoked(Notice):
     """好友戳一戳（双击头像）"""
 
@@ -153,6 +174,7 @@ class PrivatePoked(Notice):
     target_id: int
 
 
+@register_to_events
 class GroupPoked(Notice):
     """群内戳一戳（双击头像）"""
 
@@ -164,6 +186,7 @@ class GroupPoked(Notice):
     target_id: int
 
 
+@register_to_events
 class GroupRedBagKingNotice(Notice):
     """群红包运气王提示"""
 
@@ -175,6 +198,7 @@ class GroupRedBagKingNotice(Notice):
     target_id: int
 
 
+@register_to_events
 class GroupMemberHonorChanged(Notice):
     """群成员荣誉变更提示"""
 
@@ -186,6 +210,7 @@ class GroupMemberHonorChanged(Notice):
     honor_type: str
 
 
+@register_to_events
 class GroupMemberTitleChanged(Notice):
     """群成员头衔变更"""
 
@@ -197,6 +222,7 @@ class GroupMemberTitleChanged(Notice):
     title: str
 
 
+@register_to_events
 class GroupMemberCardRefreshed(Notice):
     """群成员名片更新"""
 
@@ -208,21 +234,33 @@ class GroupMemberCardRefreshed(Notice):
     card_old: str
 
 
+@register_to_events
 class OfflineFileReceived(Notice):
     """接收到离线文件"""
+
+    class File:
+        name: str
+        size: int
+        url: str
 
     notice_type = "offline_file"
 
     user_id: int
-    file: dict
+    file: File
 
 
+@register_to_events
 class ClientOnlineStateChanged(Notice):
     """其他客户端在线状态变更"""
 
+    class Device:
+        app_id: int
+        device_name: str
+        device_kind: str
+
     notice_type = "client_status"
 
-    client: dict
+    client: Device
     online: bool
 
 
@@ -238,11 +276,13 @@ class EssentialMessageChanged(Notice):
     message_id: int
 
 
+@register_to_events
 class EssentialMessageAdded(EssentialMessageChanged):
     "精华消息添加"
     sub_type = "add"
 
 
+@register_to_events
 class EssentialMessageDeleted(EssentialMessageChanged):
     """精华消息移出"""
 
