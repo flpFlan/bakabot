@@ -1,12 +1,13 @@
 # -- stdlib --
 import logging
 from typing import Type, cast
+from re import compile, RegexFlag
 
 # -- third party --
 # -- own --
 from config import Bots
 from cqhttp.events.base import CQHTTPEvent
-from cqhttp.events.message import GroupMessage, PrivateMessage
+from cqhttp.events.message import GroupMessage, Message, PrivateMessage
 
 # -- code --
 
@@ -19,26 +20,31 @@ class ServiceCore:
 
 
 class EventHandler(ServiceCore):
-    interested: list
+    interested: list[Type[CQHTTPEvent]]
 
     async def handle(self, evt: CQHTTPEvent):
         ...  # to override it
 
 
-class GroupMessageHandler(EventHandler):
-    """因为group message handler很常见，就单独拿出来了"""
+class MessageHandler(EventHandler):
+    interested: list[Type[Message]]
+    entrys = []
+    entry_flags = 0
 
-    interested = [GroupMessage]
+    def __init__(self, service):
+        super().__init__(service)
+        entry = self.entrys
+        self.entrys = [compile(et, self.entry_flags) for et in entry]
 
-
-class PrivateMessageHandler(EventHandler):
-    """因为private message handler很常见，就单独拿出来了"""
-
-    interested = [PrivateMessage]
+    def fliter(self, evt: Message):
+        msg = evt.message
+        for _entry in self.entrys:
+            if match := _entry.match(msg):
+                return match.groupdict()
 
 
 class Service:
-    service_on = True
+    service_on = False
     cores = []
 
     def __init__(self, bot):

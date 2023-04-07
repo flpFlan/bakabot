@@ -24,14 +24,14 @@ def register_to_events(evt: Type[CQHTTPEvent]):
             all_events["message"][mt][" "] = evt
     elif nt := getattr(evt, "notice_type", None):
         if st:
-            all_events["notice_type"][nt][st] = evt
+            all_events["notice"][nt][st] = evt
         else:
-            all_events["notice_type"][nt][" "] = evt
+            all_events["notice"][nt][" "] = evt
     elif rt := getattr(evt, "request_type", None):
         if st:
-            all_events["request_type"][rt][st] = evt
+            all_events["request"][rt][st] = evt
         else:
-            all_events["request_type"][rt][" "] = evt
+            all_events["request"][rt][" "] = evt
     elif met := getattr(evt, "meta_event_type", None):
         if st:
             all_events["meta_event"][met][st] = evt

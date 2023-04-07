@@ -4,25 +4,25 @@
 # -- own --
 from config import Administrators
 from service.base import Service, log
-from service.base import EventHandler, register_to
+from service.base import MessageHandler, register_to
 from cqhttp.events.message import Message
 
 # -- code --
 
 
-class CommandCore(EventHandler):
+class CommandCore(MessageHandler):
     interested = [Message]
-    entry = [r"(?<=^/cmd)(?:\s)*(?P<cmd>[\s\S]+)"]
+    entrys = [r"(?<=^/cmd)(?:\s)*(?P<cmd>[\s\S]+)"]
 
     # async def handle(self, msg: Message):
     # ...
 
-    async def handle(self, evt: Message) -> bool:
+    async def handle(self, evt: Message):
         qq = evt.user_id
-        cmd = evt.message
         if not qq in Administrators:
             return False
         try:
+            cmd = self.fliter(evt)["cmd"]
             exec(cmd)
         except Exception as e:
             log.error("error while excute command:\n%s", e)
