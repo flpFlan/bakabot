@@ -1,15 +1,18 @@
 # -- stdlib --
-import asyncio, logging, json, re
-from typing import cast
+import logging
+from typing import TypeVar, cast
 
 # -- third party --
 
 # -- own --
 from adapter import CQHTTPAdapter
+from cqhttp.api.base import ApiAction
 from cqhttp.events.base import CQHTTPEvent
+from db.database import DataBase
+
 
 # -- code --
-log = logging.getLogger("Bot")
+log = logging.getLogger("bot")
 
 
 class BotBehavior:
@@ -19,11 +22,11 @@ class BotBehavior:
     async def loop(self):
         bot = self.bot
         while True:
-            evt = await bot.rev()
+            evt = await self.rev()
             for s in bot.services:
                 if not s.service_on:
                     continue
-                from service.base import EventHandler
+                from services.base import EventHandler
 
                 for h in s.cores:
                     if not isinstance(h, EventHandler):
@@ -33,6 +36,44 @@ class BotBehavior:
                     ):
                         continue
                     await h.handle(evt)
+
+    async def run(self, addr: str):
+        bot = self.bot
+        if bot.is_running:
+            log.warning("already running")
+            return
+
+        await self.bot.go.connect("ws://" + addr)
+
+        from services.base import Service
+
+        services = bot.services
+        bot.services = [s(bot) if not isinstance(s, Service) else s for s in services]
+        for s in bot.services:
+            await s.start()
+
+        bot.is_running = True
+        await self.loop()
+
+        log.warning("bot shootdown")
+        await self.stop()
+
+    async def stop(self):
+        bot = self.bot
+        if not bot.is_running:
+            log.warning("already closed")
+            return
+
+        await bot.go.disconnect()
+        bot.is_running = False
+
+    async def rev(self) -> CQHTTPEvent:
+        bot = self.bot
+        return await bot.go.rev_evt()
+
+    async def post_api(self, act: ApiAction):
+        bot = self.bot
+        return await bot.go.api(act)
 
 
 class Bot:
@@ -44,37 +85,4 @@ class Bot:
         self.qq_number = qq_number
         self.behavior = BotBehavior(self)
         self.go = CQHTTPAdapter(self)
-
-    async def run(self, addr: str):
-        if self.is_running:
-            log.debug("already running")
-            return
-
-        await self.go.connect("ws://" + addr)
-
-        from service.base import Service
-
-        services = self.services
-        self.services = [s(self) if not isinstance(s, Service) else s for s in services]
-        for s in self.services:
-            await s.start()
-
-        self.is_running = True
-        await self.behavior.loop()
-
-        log.debug("bot shootdown")
-        await self.stop()
-
-    async def stop(self):
-        if not self.is_running:
-            log.debug("already closed")
-            return
-
-        await self.go.disconnect()
-        self.is_running = False
-
-    async def rev(self) -> CQHTTPEvent:
-        return await self.go.rev_evt()
-
-    async def post_api(self, action: str, echo="", **params) -> dict:
-        return await self.go.api(action, echo, **params)
+        self.db = DataBase(self)

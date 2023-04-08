@@ -1,11 +1,18 @@
 # -- stdlib --
-import asyncio
+import asyncio, logging
 
 # -- third party --
 # -- own --
 from config import Bots, Endpoints
 
 # -- code --
+logging.basicConfig(
+    filename="log.txt",
+    format="%(asctime)s - %(name)s - %(levelname)s"
+    + "\n==============================================\n"
+    + "%(message)s",
+    level=logging.DEBUG,
+)
 
 
 async def start_bot():
@@ -14,7 +21,7 @@ async def start_bot():
         addr = Endpoints.get(bot.name, default)
 
         assert addr
-        await bot.run(addr)
+        await bot.behavior.run(addr)
 
 
 if __name__ == "__main__":

@@ -1,13 +1,15 @@
 # -- stdlib --
+import logging
 
 # -- third party --
 # -- own --
 from config import Administrators
-from service.base import Service, log
-from service.base import MessageHandler, register_to
+from services.base import Service
+from services.base import MessageHandler, register_to
 from cqhttp.events.message import Message
 
 # -- code --
+log = logging.getLogger("bot.service")
 
 
 class CommandCore(MessageHandler):

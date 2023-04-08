@@ -11,12 +11,14 @@ from cqhttp.events.message import GroupMessage, Message, PrivateMessage
 
 # -- code --
 
-log = logging.getLogger("Service")
+log = logging.getLogger("bot.service")
 
 
 class ServiceCore:
-    def __init__(self, service):
-        self.service = service = cast(Service, service)
+    def __init__(self, bot):
+        from bot import Bot
+
+        self.bot = bot = cast(Bot, bot)
 
 
 class EventHandler(ServiceCore):
@@ -48,10 +50,7 @@ class Service:
     cores = []
 
     def __init__(self, bot):
-        from bot import Bot
-
-        self.bot = bot = cast(Bot, bot)
-        self.cores = [core(self) for core in self.cores]
+        self.cores = [core(bot) for core in self.cores]
 
     async def start(self):
         self.service_on = True
