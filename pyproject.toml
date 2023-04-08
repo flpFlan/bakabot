@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "bakabot"
+version = "0.1.0"
+description = "bakabot"
+authors = ["flpFlan"]
+repository = "https://github.com/flpFlan/bakabot"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+websockets = "^11.0.1"
+
+[[tool.poetry.source]]
+name = "tencent"
+url = "https://mirrors.cloud.tencent.com/pypi/simple"
