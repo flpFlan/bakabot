@@ -1,6 +1,6 @@
 # -- stdlib --
 import json, logging
-from typing import cast, TypeVar
+from typing import cast, TypeVar, Generic
 from urllib.parse import urljoin
 
 # -- third party --
@@ -14,7 +14,6 @@ from cqhttp.api.base import ApiAction, all_apis
 
 # -- code --
 log = logging.getLogger("bot")
-# T = TypeVar("T", *all_apis)
 
 
 class CQHTTPAdapter:
@@ -48,14 +47,15 @@ class CQHTTPAdapter:
         json = await self.rev_json()
         return self.trans_json_to_evt(json)
 
-    async def api(self, act: ApiAction):
+    async def api(self, act: ApiAction) -> bool:
         params = self.trans_action_to_json(act)
         result = await self._api(**params)
-        if act.Response is ApiAction.Response:
-            return
-        res = act.Response()
-        set_attr(res, result)
-        return res
+        if res := act.response:
+            set_attr(res, result)
+        if result.get("status", "failed") == "failed":
+            log.info(f"api call failed:\n{result}")
+            return False
+        return True
 
     async def _api(self, action: str, echo="", **params) -> dict:
         form = {}
@@ -90,14 +90,38 @@ class CQHTTPAdapter:
 
     @staticmethod
     def trans_action_to_json(act: ApiAction) -> dict:
-        return act.__dict__
+        result = {}
+        for name, value in act.__dict__.items():
+            if isinstance(value, list):
+                l = []
+                for sub_value in value:
+                    r = CQHTTPAdapter.trans_action_to_json(sub_value)
+                    l.append(r)
+                result[name] = l
+            else:
+                result[name] = value
+        action = getattr(act, "action", None)
+        result["action"] = action
+        return result
 
 
 def set_attr(obj, attrs: dict):
     for name, value in attrs.items():
-        if not isinstance(value, dict):
-            setattr(obj, name, value)
-        else:
+        if isinstance(value, dict):
             sub_obj = obj.__annotations__.get(name)
             assert sub_obj
             set_attr(sub_obj(), value)
+            setattr(obj, name, sub_obj)
+        elif isinstance(value, list):
+            l = []
+            for i in value:
+                if isinstance(i, dict):
+                    o = object()
+                    set_attr(o, i)
+                    l.append(o)
+                else:
+                    l.append(0)
+            setattr(obj, name, l)
+
+        else:
+            setattr(obj, name, value)
