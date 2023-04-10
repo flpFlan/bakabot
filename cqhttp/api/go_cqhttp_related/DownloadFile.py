@@ -1,3 +1,4 @@
+"""下载文件到缓存目录"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 

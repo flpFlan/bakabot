@@ -1,3 +1,4 @@
+"""获取群 @全体成员 剩余次数"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 

@@ -1,3 +1,4 @@
+"""获取登录号信息"""
 from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 
 

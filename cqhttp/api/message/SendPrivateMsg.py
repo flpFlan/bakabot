@@ -1,3 +1,4 @@
+"""发送私聊消息"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 

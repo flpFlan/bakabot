@@ -1,3 +1,4 @@
+"""设置群名片 ( 群备注 )"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api
 

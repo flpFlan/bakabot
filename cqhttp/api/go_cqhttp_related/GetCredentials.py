@@ -1,3 +1,4 @@
+"""获取 QQ 相关接口凭证"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 

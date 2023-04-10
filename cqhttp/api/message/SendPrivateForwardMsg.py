@@ -1,3 +1,4 @@
+"""发送合并转发 ( 好友 )"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 from cqhttp.api.message.SendGroupForwardMsg import ForwardNode

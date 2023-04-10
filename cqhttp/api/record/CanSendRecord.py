@@ -1,3 +1,4 @@
+"""检查是否可以发送语音"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 

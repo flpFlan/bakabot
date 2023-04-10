@@ -1,11 +1,13 @@
-requrement
+BakaBot
 ==========
+Requrement
+----------
 - python 3.11
 - poetry
 - [go-cqhttp](https://github.com/Mrs4s/go-cqhttp)
 
 Install
-==========
+----------
 - run at shell
 
 ```
@@ -13,7 +15,7 @@ poetry install
 ```
 
 How to use
-==========
+-----------
 1. Add your bot to `Bots` in [config.py](config.py)
 
 2. Modify in the `Endpoints` with endpoint exactly matching your bot
@@ -30,7 +32,7 @@ Bots: list[Bot] = [Bot("BAKA", 2777777777)]
 Endpoints = {"BAKA": "localhost:2333"}
 ```
 
-4. run go-cqhttp
+4. run [go-cqhttp](https://github.com/Mrs4s/go-cqhttp)
 
 5. run [start_bot.py](start_bot.py)
 

@@ -1,3 +1,4 @@
+"""获取群成员列表"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 from cqhttp.api.group_info.GetGroupMemberInfo import Response as Res

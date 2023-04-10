@@ -1,3 +1,4 @@
+"""对事件执行快速操作 ( 隐藏 API )"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api
 

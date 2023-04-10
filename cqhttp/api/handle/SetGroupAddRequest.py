@@ -1,3 +1,4 @@
+"""处理加群请求／邀请"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 

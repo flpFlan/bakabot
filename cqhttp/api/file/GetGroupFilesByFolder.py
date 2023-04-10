@@ -1,3 +1,4 @@
+"""获取群子目录文件列表"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 from cqhttp.api.file.GetGroupRootFiles import File, Folder

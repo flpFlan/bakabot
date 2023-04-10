@@ -2,10 +2,15 @@ from typing import Type
 from collections import defaultdict
 
 
+class EventArgs:
+    canceled = False
+
+
 class CQHTTPEvent:
     time: int
     self_id: int
     post_type: str
+    _ = EventArgs()
 
 
 def nested_dict():

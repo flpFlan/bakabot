@@ -65,12 +65,13 @@ class CQHTTPAdapter:
         if echo:
             form["echo"] = echo
 
+        data = json.dumps(form)
         try:
-            await self.api_connection.send(form)
+            await self.api_connection.send(data)
         except ConnectionClosedError:
             log.error("go-cqhttp connection shootdown")
             await self.connect("ws://localhost:2333")
-            await self.api_connection.send(form)
+            await self.api_connection.send(data)
         result = await self.api_connection.recv()
 
         return json.loads(result)
@@ -92,6 +93,8 @@ class CQHTTPAdapter:
     def trans_action_to_json(act: ApiAction) -> dict:
         result = {}
         for name, value in act.__dict__.items():
+            if name == "bot":
+                continue
             if isinstance(value, list):
                 l = []
                 for sub_value in value:

@@ -1,3 +1,4 @@
+"""获取当前账号在线客户端列表"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, ResponseBase, register_to_api
 

@@ -24,8 +24,16 @@ class ServiceCore:
 class EventHandler(ServiceCore):
     interested: list[Type[CQHTTPEvent]]
 
+    @staticmethod
+    async def before_handle(evt: CQHTTPEvent):
+        ...
+
     async def handle(self, evt: CQHTTPEvent):
         ...  # to override it
+
+    @staticmethod
+    async def after_handle(evt: CQHTTPEvent):
+        ...
 
 
 class MessageHandler(EventHandler):
@@ -42,6 +50,7 @@ class MessageHandler(EventHandler):
         msg = evt.message
         for _entry in self.entrys:
             if match := _entry.match(msg):
+                r = match.groupdict()
                 return match.groupdict()
 
 

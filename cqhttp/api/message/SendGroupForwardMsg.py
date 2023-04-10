@@ -1,3 +1,4 @@
+"""发送合并转发 ( 群聊 )"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 

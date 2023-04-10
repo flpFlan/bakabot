@@ -1,3 +1,4 @@
+"""重启 Go-CqHttp"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api
 
