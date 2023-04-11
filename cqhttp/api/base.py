@@ -3,9 +3,13 @@ from typing import Type, Optional, cast, TypeVar, Generic
 
 # -- third party --
 # -- own --
-
+from cqhttp.base import Event, EventArgs
 
 # -- code --
+
+
+class ApiActionArgs(EventArgs):
+    before_post: bool
 
 
 class ResponseBase:
@@ -20,10 +24,11 @@ class ResponseBase:
 TResponse = TypeVar("TResponse", bound=ResponseBase)
 
 
-class ApiAction(Generic[TResponse]):
+class ApiAction(Event, Generic[TResponse]):
     action: str
     echo: Optional[str]
     response: Optional[TResponse]
+    _ = ApiActionArgs()
 
     def bind(self, bot):
         from bot import Bot

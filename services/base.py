@@ -1,13 +1,13 @@
 # -- stdlib --
-import logging
+import logging, re
 from typing import Type, cast
 from re import compile, RegexFlag
 
 # -- third party --
 # -- own --
 from config import Bots
-from cqhttp.events.base import CQHTTPEvent
-from cqhttp.events.message import GroupMessage, Message, PrivateMessage
+from cqhttp.base import Event
+from cqhttp.events.message import Message
 
 # -- code --
 
@@ -22,18 +22,10 @@ class ServiceCore:
 
 
 class EventHandler(ServiceCore):
-    interested: list[Type[CQHTTPEvent]]
+    interested: list[Type[Event]]
 
-    @staticmethod
-    async def before_handle(evt: CQHTTPEvent):
-        ...
-
-    async def handle(self, evt: CQHTTPEvent):
+    async def handle(self, evt: Event):
         ...  # to override it
-
-    @staticmethod
-    async def after_handle(evt: CQHTTPEvent):
-        ...
 
 
 class MessageHandler(EventHandler):
@@ -57,6 +49,8 @@ class MessageHandler(EventHandler):
 class Service:
     service_on = False
     cores = []
+    execute_before = []
+    execute_after = []
 
     def __init__(self, bot):
         self.cores = [core(bot) for core in self.cores]

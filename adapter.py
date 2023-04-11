@@ -1,5 +1,5 @@
 # -- stdlib --
-import json, logging
+import json, logging, asyncio
 from typing import cast, TypeVar, Generic
 from urllib.parse import urljoin
 
@@ -23,8 +23,27 @@ class CQHTTPAdapter:
         self.bot = bot = cast(Bot, bot)
 
     async def connect(self, uri: str):
-        self.evt_connection = await connect(urljoin(uri, "/event"))
-        self.api_connection = await connect(urljoin(uri, "/api"))
+        self.evt_connection = await connect(urljoin(uri, "/event"), ping_interval=None)
+        self.api_connection = await connect(urljoin(uri, "/api"), ping_interval=None)
+
+    async def reconnect(self) -> bool:
+        from config import MAX_CONNECT_RETRIES
+
+        host = self.api_connection.host or self.evt_connection.host
+        port = self.api_connection.port or self.evt_connection.port
+        assert host and port
+
+        current_retry = 0
+        while current_retry < MAX_CONNECT_RETRIES or MAX_CONNECT_RETRIES < 0:
+            try:
+                await self.connect(host + ":" + str(port))
+                log.info("reconnect success")
+                return True
+            except:
+                log.warning("%s times retry failed", current_retry + 1)
+            await asyncio.sleep(1)
+            current_retry += 1
+        return False
 
     async def disconnect(self):
         await self.evt_connection.close()
@@ -34,9 +53,13 @@ class CQHTTPAdapter:
         try:
             raw = await self.evt_connection.recv()
         except ConnectionClosedError:
-            log.error("go-cqhttp connection shootdown")
-            await self.connect("ws://localhost:2333")
-            return await self.rev_raw()
+            log.warning("go-cqhttp connection shootdown,attempting to reconnect...")
+            success = await self.reconnect()
+            if not success:
+                log.error("max retry reached, %sshootdown", self.bot.name)
+                await self.bot.behavior.stop()
+                raise Exception("Max Retry Reached")
+            raw = await self.evt_connection.recv()
         return cast(str, raw)
 
     async def rev_json(self) -> dict:
@@ -68,12 +91,16 @@ class CQHTTPAdapter:
         data = json.dumps(form)
         try:
             await self.api_connection.send(data)
+            result = await self.api_connection.recv()
         except ConnectionClosedError:
-            log.error("go-cqhttp connection shootdown")
-            await self.connect("ws://localhost:2333")
+            log.warning("go-cqhttp connection shootdown,attempting to reconnect...")
+            success = await self.reconnect()
+            if not success:
+                log.error("max retry reached, %sshootdown", self.bot.name)
+                await self.bot.behavior.stop()
+                raise Exception("Max Retry Reached")
             await self.api_connection.send(data)
-        result = await self.api_connection.recv()
-
+            result = await self.api_connection.recv()
         return json.loads(result)
 
     @staticmethod
@@ -93,7 +120,7 @@ class CQHTTPAdapter:
     def trans_action_to_json(act: ApiAction) -> dict:
         result = {}
         for name, value in act.__dict__.items():
-            if name == "bot":
+            if name in ("bot", "_"):
                 continue
             if isinstance(value, list):
                 l = []

@@ -1,11 +1,14 @@
 # -- stdlib --
-import logging
+import asyncio
+import logging, os
 from typing import TypeVar, cast
+from collections import defaultdict
 
 # -- third party --
 
 # -- own --
 from adapter import CQHTTPAdapter
+from cqhttp.base import Event
 from cqhttp.api.base import ApiAction
 from cqhttp.events.base import CQHTTPEvent
 from db.database import DataBase
@@ -15,35 +18,69 @@ from db.database import DataBase
 log = logging.getLogger("bot")
 
 
+def sort_services(services):
+    graph = {}
+    for seivice in services:
+        graph[seivice] = {
+            "before": set(seivice.execute_before),
+            "after": set(seivice.execute_after),
+        }
+        for dep in seivice.execute_before:
+            graph[dep.__name__]["after"].add(seivice)
+        for dep_by in seivice.stand_after:
+            graph[dep_by.__name__]["before"].add(seivice)
+
+    queue = [service for service, dep in graph.items() if not dep["before"]]
+    result = []
+    while queue:
+        service = queue.pop(0)
+        result.append(service)
+        for dep_by in graph[service]["after"]:
+            graph[dep_by]["before"].remove(service)
+            if not graph[dep_by]["before"]:
+                queue.append(dep_by)
+
+    for i, service in enumerate(result):
+        for dep in service.execute_before:
+            dep_idx = services.index(dep())
+            if dep_idx >= i:
+                services[i], services[dep_idx] = services[dep_idx], services[i]
+                i = dep_idx
+        for dep_by in service.execute_after:
+            dep_by_index = services.index(dep_by())
+            if dep_by_index <= i:
+                services[dep_by_index], services[i] = (
+                    services[i],
+                    services[dep_by_index],
+                )
+
+
 class BotBehavior:
     def __init__(self, bot):
         self.bot = bot = cast(Bot, bot)
 
-    async def loop(self):
+    async def process_evt(self, evt: Event):
         bot = self.bot
+        for service in bot.services:
+            if not service.service_on:
+                continue
+            if evt._.canceled:
+                return
+            from services.base import EventHandler
+
+            for handler in service.cores:
+                if not isinstance(handler, EventHandler):
+                    continue
+                if not any(
+                    [True if isinstance(evt, i) else False for i in handler.interested]
+                ):
+                    continue
+                await handler.handle(evt)
+
+    async def loop(self):
         while True:
             evt = await self.rev()
-            for service in bot.services:
-                if not service.service_on:
-                    continue
-                from services.base import EventHandler
-
-                for handler in service.cores:
-                    if not isinstance(handler, EventHandler):
-                        continue
-                    if evt._.canceled:
-                        break
-                    if not any(
-                        [
-                            True if isinstance(evt, i) else False
-                            for i in handler.interested
-                        ]
-                    ):
-                        continue
-                    await handler.before_handle(evt)
-                    # if not evt._
-                    await handler.handle(evt)
-                    await handler.after_handle(evt)
+            await self.process_evt(evt)
 
     async def run(self, endpoint: str):
         bot = self.bot
@@ -52,16 +89,20 @@ class BotBehavior:
             return
 
         await bot.go.connect("ws://" + endpoint)
+        if not os.path.exists("data/db"):
+            os.makedirs("data/db")
+        await bot.db.connect("data/db/%s.db" % bot.name)
 
         from services.base import Service
 
         services = bot.services
+        sort_services(services)
         bot.services = [s(bot) if not isinstance(s, Service) else s for s in services]
         for s in bot.services:
             await s.start()
 
         bot.is_running = True
-        print("%s started!" % bot.name)
+        print("%s started！" % bot.name)
         await self.loop()
 
         log.warning("%s shootdown :(" % bot.name)
@@ -74,7 +115,9 @@ class BotBehavior:
             return
 
         await bot.go.disconnect()
+        await bot.db.close()
         bot.is_running = False
+        print("%s closed!" % bot.name)
 
     async def rev(self) -> CQHTTPEvent:
         bot = self.bot
@@ -82,7 +125,11 @@ class BotBehavior:
 
     async def post_api(self, act: ApiAction):
         bot = self.bot
-        return await bot.go.api(act)
+        act._.before_post = True
+        await self.process_evt(act)
+        await bot.go.api(act)
+        act._.before_post = False
+        await self.process_evt(act)
 
 
 class Bot:
@@ -95,38 +142,3 @@ class Bot:
         self.behavior = BotBehavior(self)
         self.go = CQHTTPAdapter(self)
         self.db = DataBase(self)
-
-
-# def sort_service(services:list):
-#     graph = {}
-#     for cls in services:
-#         cls_name = cls.__name__
-#         graph[cls_name] = {'depends_on': set(cls.execute_before), 'depended_by': set(cls.execute_after)}
-#         for dep_cls in cls.execute_before:
-#             graph[dep_cls.__name__]['depended_by'].add(cls_name)
-#         for depended_by_cls in cls.stand_after:
-#             graph[depended_by_cls.__name__]['depends_on'].add(cls_name)
-
-#     queue = [cls_name for cls_name, dep_info in graph.items() if not dep_info['depends_on']]
-#     result = []
-#     while queue:
-#         cls_name = queue.pop(0)
-#         result.append(cls_name)
-#         for depended_by_cls_name in graph[cls_name]['depended_by']:
-#             graph[depended_by_cls_name]['depends_on'].remove(cls_name)
-#             if not graph[depended_by_cls_name]['depends_on']:
-#                 queue.append(depended_by_cls_name)
-
-#     for i, cls_name in enumerate(result):
-#         cls = eval(cls_name)
-
-#         for dep_cls in cls.execute_before:
-#             dep_idx = services.index(dep_cls())
-#             if dep_idx >= i:
-#                 services[i], services[dep_idx] = services[dep_idx], services[i]
-#                 i = dep_idx
-
-#         for depended_by_cls in cls.execute_after:
-#             depended_by_idx = services.index(depended_by_cls())
-#             if depended_by_idx <= i:
-#                 services[depended_by_idx], services

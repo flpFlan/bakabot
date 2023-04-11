@@ -1,16 +1,23 @@
+# -- stdlib --
 from typing import Type
 from collections import defaultdict
 
+# -- third party --
+# -- own --
+from cqhttp.base import Event, EventArgs
 
-class EventArgs:
-    canceled = False
+# -- code --
 
 
-class CQHTTPEvent:
+class CQHTTPEventArgs(EventArgs):
+    ...
+
+
+class CQHTTPEvent(Event):
     time: int
     self_id: int
     post_type: str
-    _ = EventArgs()
+    _ = CQHTTPEventArgs()
 
 
 def nested_dict():
