@@ -1,6 +1,6 @@
 # -- stdlib --
 import json, logging, asyncio
-from typing import cast, TypeVar, Generic
+from typing import cast
 from urllib.parse import urljoin
 
 # -- third party --
@@ -10,7 +10,7 @@ from websockets.exceptions import ConnectionClosedError
 # -- own --
 from cqhttp.events.base import CQHTTPEvent
 from cqhttp.events.base import all_events
-from cqhttp.api.base import ApiAction, all_apis
+from cqhttp.api.base import ApiAction
 
 # -- code --
 log = logging.getLogger("bot")

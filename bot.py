@@ -1,8 +1,7 @@
 # -- stdlib --
 import asyncio
 import logging, os
-from typing import TypeVar, cast
-from collections import defaultdict
+from typing import cast
 
 # -- third party --
 
@@ -26,9 +25,9 @@ def sort_services(services):
             "after": set(seivice.execute_after),
         }
         for dep in seivice.execute_before:
-            graph[dep.__name__]["after"].add(seivice)
+            graph[dep]["after"].add(seivice)
         for dep_by in seivice.stand_after:
-            graph[dep_by.__name__]["before"].add(seivice)
+            graph[dep_by]["before"].add(seivice)
 
     queue = [service for service, dep in graph.items() if not dep["before"]]
     result = []
@@ -64,8 +63,6 @@ class BotBehavior:
         for service in bot.services:
             if not service.service_on:
                 continue
-            if evt._.canceled:
-                return
             from services.base import EventHandler
 
             for handler in service.cores:
@@ -76,6 +73,8 @@ class BotBehavior:
                 ):
                     continue
                 await handler.handle(evt)
+                if evt._.canceled:
+                    return
 
     async def loop(self):
         while True:
