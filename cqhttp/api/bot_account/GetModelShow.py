@@ -15,8 +15,10 @@ class GetModelShow(ApiAction[Response]):
     """获取在线机型"""
 
     action = "_get_model_show"
-    response = Response()
+    response: Response
 
     def __init__(self, model: str, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.model = model
         self.echo = echo

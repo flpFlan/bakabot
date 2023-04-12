@@ -26,7 +26,7 @@ def sort_services(services):
         }
         for dep in seivice.execute_before:
             graph[dep]["after"].add(seivice)
-        for dep_by in seivice.stand_after:
+        for dep_by in seivice.execute_after:
             graph[dep_by]["before"].add(seivice)
 
     queue = [service for service, dep in graph.items() if not dep["before"]]

@@ -120,7 +120,7 @@ class CQHTTPAdapter:
     def trans_action_to_json(act: ApiAction) -> dict:
         result = {}
         for name, value in act.__dict__.items():
-            if name in ("bot", "_"):
+            if name in ("bot", "_", "response"):
                 continue
             if isinstance(value, list):
                 l = []

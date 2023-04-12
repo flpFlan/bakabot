@@ -17,7 +17,9 @@ class CQHTTPEvent(Event):
     time: int
     self_id: int
     post_type: str
-    _ = CQHTTPEventArgs()
+
+    def __init__(self):
+        self._ = CQHTTPEventArgs()
 
 
 def nested_dict():

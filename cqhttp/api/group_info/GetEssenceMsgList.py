@@ -21,8 +21,10 @@ class GetEssenceMsgList(ApiAction[Response]):
     """获取精华消息列表"""
 
     action = "get_essence_msg_list"
-    response = Response()
+    response: Response
 
     def __init__(self, group_id: int, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.group_id = group_id
         self.echo = echo

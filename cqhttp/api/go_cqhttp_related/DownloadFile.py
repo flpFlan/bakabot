@@ -15,7 +15,7 @@ class DownloadFile(ApiAction[Response]):
     """下载文件到缓存目录"""
 
     action = "download_file"
-    response = Response()
+    response: Response
 
     def __init__(
         self,
@@ -25,6 +25,8 @@ class DownloadFile(ApiAction[Response]):
         *,
         echo: Optional[str] = None
     ):
+        super().__init__()
+        self.response = Response()
         self.url = url
         self.thread_count = thread_count
         self.headers = headers

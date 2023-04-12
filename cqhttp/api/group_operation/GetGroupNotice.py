@@ -21,8 +21,10 @@ class GetGroupNotice(ApiAction[Response]):
     """获取群公告"""
 
     action = "_get_group_notice"
-    response = Response()
+    response: Response
 
     def __init__(self, group_id: int, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.group_id = group_id
         self.echo = echo

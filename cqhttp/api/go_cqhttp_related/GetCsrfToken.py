@@ -15,7 +15,9 @@ class GetCsrfToken(ApiAction[Response]):
     """获取 CSRF Token"""
 
     action = "get_csrf_token"
-    response = Response()
+    response: Response
 
     def __init__(self, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.echo = echo

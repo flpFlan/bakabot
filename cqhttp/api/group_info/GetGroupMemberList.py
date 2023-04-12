@@ -13,11 +13,13 @@ class GetGroupMemberList(ApiAction[Response]):
     """获取群成员列表"""
 
     action = "get_group_member_list"
-    response = Response()
+    response: Response
 
     def __init__(
         self, group_id: int, no_cache: bool = False, *, echo: Optional[str] = None
     ):
+        super().__init__()
+        self.response = Response()
         self.group_id = group_id
         self.no_cache = no_cache
         self.echo = echo

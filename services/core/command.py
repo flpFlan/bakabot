@@ -22,18 +22,18 @@ class CommandCore(MessageHandler):
         qq = evt.user_id
         if not qq in Administrators:
             return False
-        try:
-            if r := self.fliter(evt):
-                cmd = r["cmd"]
+        command = {}
+        if r := self.fliter(evt):
+            cmd = r["cmd"]
+            cmd = command.get(cmd, None) or cmd
+            try:
                 exec(cmd)
-        except Exception as e:
-            log.error("error while excute command:\n%s", e)
-            if isinstance(evt, GroupMessage):
-                bot = self.bot
-                group_id = evt.group_id
-                await SendMsg(group_id=group_id, message=str(e)).do(bot)
-            return False
-        return True
+            except Exception as e:
+                log.error("error while excute command:\n%s", e)
+                if isinstance(evt, GroupMessage):
+                    bot = self.bot
+                    group_id = evt.group_id
+                    await SendMsg(group_id=group_id, message=str(e)).do(bot)
 
     async def close(self):
         log.warning("Command must be on")

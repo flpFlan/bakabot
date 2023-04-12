@@ -17,7 +17,7 @@ class ServiceCore:
         from bot import Bot
 
         self.service = service = cast(Service, service)
-        self.bot = self.bot or cast(Bot, None)
+        self.bot = getattr(self, "bot", None) or cast(Bot, None)
 
 
 class EventHandler(ServiceCore):

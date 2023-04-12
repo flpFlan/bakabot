@@ -24,8 +24,10 @@ class GetForwardMsg(ApiAction[Response]):
     """获取合并转发内容"""
 
     action = "get_forward_msg"
-    response = Response()
+    response: Response
 
     def __init__(self, message_id: int, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.message_id = message_id
         self.echo = echo

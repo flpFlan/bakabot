@@ -17,7 +17,9 @@ class GetFriendList(ApiAction[Response]):
     """获取好友列表"""
 
     action = "get_friend_list"
-    response = Response()
+    response: Response
 
     def __init__(self, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.echo = echo

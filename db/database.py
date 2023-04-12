@@ -24,9 +24,12 @@ class DataBase:
         self.connection = None
         self.cursor = None
 
-    def execute(self, sql: str, params=...):
+    def execute(self, sql: str, params=None):
         assert self.cursor
-        self.cursor.execute(sql, params)
+        if params:
+            self.cursor.execute(sql, params)
+        else:
+            self.cursor.execute(sql)
 
     def fatchall(self):
         assert self.cursor

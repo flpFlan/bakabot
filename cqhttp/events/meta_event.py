@@ -6,6 +6,9 @@ class MetaEvent(CQHTTPEvent):
     post_type = "meta_event"
     meta_event_type: str
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class HeartBeatBag(MetaEvent):
@@ -32,23 +35,38 @@ class HeartBeatBag(MetaEvent):
     status: Status
     interval: int
 
+    def __init__(self):
+        super().__init__()
+
 
 class LifeCycle(MetaEvent):
     meta_event_type = "lifecycle"
 
     sub_type: str
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class LifeCycleEnabled(LifeCycle):
     sub_type = "enable"
+
+    def __init__(self):
+        super().__init__()
 
 
 @register_to_events
 class LifeCycleDisabled(LifeCycle):
     sub_type = "disable"
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class LifeCycleConnected(LifeCycle):
     sub_type = "connect"
+
+    def __init__(self):
+        super().__init__()

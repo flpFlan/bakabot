@@ -15,8 +15,10 @@ class CheckUrlSafely(ApiAction[Response]):
     """检查链接安全性"""
 
     action = "check_url_safely"
-    response = Response()
+    response: Response
 
     def __init__(self, url: str, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.url = url
         self.echo = echo

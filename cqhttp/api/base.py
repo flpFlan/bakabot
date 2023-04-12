@@ -28,7 +28,9 @@ class ApiAction(Event, Generic[TResponse]):
     action: str
     echo: Optional[str]
     response: Optional[TResponse]
-    _ = ApiActionArgs()
+
+    def __init__(self):
+        self._ = ApiActionArgs()
 
     def bind(self, bot):
         from bot import Bot

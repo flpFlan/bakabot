@@ -28,7 +28,9 @@ class GetVersionInfo(ApiAction[Response]):
     """获取版本信息"""
 
     action = "get_version_info"
-    response = Response()
+    response: Response
 
     def __init__(self, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.echo = echo

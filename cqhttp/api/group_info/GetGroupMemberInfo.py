@@ -30,7 +30,7 @@ class GetGroupMemberInfo(ApiAction[Response]):
     """获取群成员信息"""
 
     action = "get_group_member_info"
-    response = Response()
+    response: Response
 
     def __init__(
         self,
@@ -40,6 +40,8 @@ class GetGroupMemberInfo(ApiAction[Response]):
         *,
         echo: Optional[str] = None
     ):
+        super().__init__()
+        self.response = Response()
         self.group_id = group_id
         self.user_id = user_id
         self.no_cache = no_cache

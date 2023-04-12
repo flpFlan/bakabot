@@ -15,8 +15,10 @@ class GetCookies(ApiAction[Response]):
     """获取 Cookies"""
 
     action = "get_cookies"
-    response = Response()
+    response: Response
 
     def __init__(self, domain: Optional[str] = None, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.domain = domain
         self.echo = echo

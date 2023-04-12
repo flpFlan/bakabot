@@ -17,8 +17,10 @@ class GetImage(ApiAction[Response]):
     """获取图片信息"""
 
     action = "get_image"
-    response = Response()
+    response: Response
 
     def __init__(self, file: str, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.file = file
         self.echo = echo

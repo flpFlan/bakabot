@@ -15,11 +15,13 @@ class GetGroupFileUrl(ApiAction[Response]):
     """获取群文件资源链接"""
 
     action = "get_group_file_url"
-    response = Response()
+    response: Response
 
     def __init__(
         self, group_id: int, file_id: str, busid: int, *, echo: Optional[str] = None
     ):
+        super().__init__()
+        self.response = Response()
         self.group_id = group_id
         self.file_id = file_id
         self.busid = busid

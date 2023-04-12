@@ -15,7 +15,7 @@ class SendGroupMsg(ApiAction[Response]):
     """发送群聊消息"""
 
     action = "send_group_msg"
-    response = Response()
+    response: Response
 
     def __init__(
         self,
@@ -25,6 +25,8 @@ class SendGroupMsg(ApiAction[Response]):
         *,
         echo: Optional[str] = None
     ):
+        super().__init__()
+        self.response = Response()
         self.group_id = group_id
         self.message = message
         self.auto_escape = auto_escape

@@ -1,10 +1,10 @@
 """群匿名用户禁言"""
 from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api
+from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 
 
 @register_to_api
-class SetGroupAnonymousBan(ApiAction):
+class SetGroupAnonymousBan(ApiAction[ResponseBase]):
     """群匿名用户禁言"""
 
     action = "set_group_anonymous_ban"
@@ -18,6 +18,8 @@ class SetGroupAnonymousBan(ApiAction):
         duration: int = 30 * 60,
         echo: Optional[str] = None
     ):
+        super().__init__()
+        self.response = ResponseBase()
         self.group_id = group_id
         assert anonymous or anonymous_flag, "anonymous和anonymous_flag必须传入一个"
         if anonymous:

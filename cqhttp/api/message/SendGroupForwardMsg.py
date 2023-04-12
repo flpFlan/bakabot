@@ -24,11 +24,13 @@ class SendGroupForwardMsg(ApiAction[Response]):
     """发送合并转发 ( 群聊 )"""
 
     action = "send_group_forward_msg"
-    response = Response()
+    response: Response
 
     def __init__(
         self, group_id: int, messages: list[ForwardNode], *, echo: Optional[str] = None
     ):
+        super().__init__()
+        self.response = Response()
         self.group_id = group_id
         self.messages = messages
         self.echo = echo

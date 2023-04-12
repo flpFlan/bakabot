@@ -14,6 +14,9 @@ class Message(CQHTTPEvent):
     sender: object
     message_sent: bool = False
 
+    def __init__(self):
+        super().__init__()
+
 
 class PrivateMessage(Message):
     """私聊消息"""
@@ -30,12 +33,18 @@ class PrivateMessage(Message):
     target_id: int
     temp_source: int
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class FriendMessage(PrivateMessage):
     """好友消息"""
 
     sub_type = "friend"
+
+    def __init__(self):
+        super().__init__()
 
 
 @register_to_events
@@ -48,6 +57,9 @@ class GroupTempMessage(PrivateMessage):
     sender: Sender
     sub_type = "group"
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class GroupSelfMessage(PrivateMessage):
@@ -55,12 +67,18 @@ class GroupSelfMessage(PrivateMessage):
 
     sub_type = "group_self"
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class OtherMessage(PrivateMessage):
     """未分类的私聊消息"""
 
     sub_type = "other"
+
+    def __init__(self):
+        super().__init__()
 
 
 class GroupMessage(Message):
@@ -83,12 +101,18 @@ class GroupMessage(Message):
     group_id: int
     anonymous: dict | None
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class NormalMessage(GroupMessage):
     """正常消息"""
 
     sub_type = "normal"
+
+    def __init__(self):
+        super().__init__()
 
 
 @register_to_events
@@ -97,9 +121,15 @@ class AnonymousMessage(GroupMessage):
 
     sub_type = "anonymous"
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class NoticeMessage(GroupMessage):
     """系统提示 ( 如「管理员已禁止群内匿名聊天」 )"""
 
     sub_type = "notice"
+
+    def __init__(self):
+        super().__init__()
