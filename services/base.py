@@ -1,13 +1,11 @@
 # -- stdlib --
-import logging, re
+import logging
 from typing import Type, cast
-from re import compile, RegexFlag
+from re import compile
 
 # -- third party --
 # -- own --
 from config import Bots
-from cqhttp.base import Event
-from cqhttp.events.message import Message
 
 # -- code --
 
@@ -15,13 +13,16 @@ log = logging.getLogger("bot.service")
 
 
 class ServiceCore:
-    def __init__(self, bot):
+    def __init__(self, service):
         from bot import Bot
 
-        self.bot = bot = cast(Bot, bot)
+        self.service = service = cast(Service, service)
+        self.bot = self.bot or cast(Bot, None)
 
 
 class EventHandler(ServiceCore):
+    from cqhttp.base import Event
+
     interested: list[Type[Event]]
 
     async def handle(self, evt: Event):
@@ -29,6 +30,8 @@ class EventHandler(ServiceCore):
 
 
 class MessageHandler(EventHandler):
+    from cqhttp.events.message import Message
+
     interested: list[Type[Message]]
     entrys = []
     entry_flags = 0
@@ -53,7 +56,10 @@ class Service:
     execute_after = []
 
     def __init__(self, bot):
-        self.cores = [core(bot) for core in self.cores]
+        self.bot = bot
+        self.cores = [core(self) for core in self.cores]
+        for core in self.cores:
+            core.bot = bot
 
     async def start(self):
         self.service_on = True

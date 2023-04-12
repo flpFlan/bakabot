@@ -73,8 +73,8 @@ class BotBehavior:
                 ):
                     continue
                 await handler.handle(evt)
-                if evt._.canceled:
-                    return
+            if evt._.canceled:
+                return
 
     async def loop(self):
         while True:
@@ -96,6 +96,10 @@ class BotBehavior:
 
         services = bot.services
         sort_services(services)
+        from services.core.base import core_services
+
+        sort_services(core_services)
+        services = core_services + services
         bot.services = [s(bot) if not isinstance(s, Service) else s for s in services]
         for s in bot.services:
             await s.start()

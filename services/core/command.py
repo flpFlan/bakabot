@@ -1,17 +1,17 @@
 # -- stdlib --
 import logging
-from typing import cast
 
 # -- third party --
 # -- own --
 from config import Administrators
 from services.base import Service
-from services.base import MessageHandler, register_to
+from services.base import MessageHandler
+from .base import core_service
 from cqhttp.events.message import Message, GroupMessage
 from cqhttp.api.message.SendMsg import SendMsg
 
 # -- code --
-log = logging.getLogger("bot.service")
+log = logging.getLogger("bot.service.command")
 
 
 class CommandCore(MessageHandler):
@@ -39,6 +39,6 @@ class CommandCore(MessageHandler):
         log.warning("Command must be on")
 
 
-@register_to("ALL")
+@core_service
 class Command(Service):
     cores = [CommandCore]

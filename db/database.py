@@ -18,16 +18,28 @@ class DataBase:
         self.connection = conn = sqlite3.connect(db)
         self.cursor = conn.cursor()
 
-    async def execute(self, sql: str):
-        assert self.connection
-        self.connection.execute(sql)
-
-    async def commit(self):
-        assert self.connection
-        self.connection.commit()
-
     async def close(self):
         assert self.connection
         self.connection.close()
         self.connection = None
         self.cursor = None
+
+    def execute(self, sql: str, params=...):
+        assert self.cursor
+        self.cursor.execute(sql, params)
+
+    def fatchall(self):
+        assert self.cursor
+        return self.cursor.fetchall()
+
+    def fatchmany(self, size: int | None = 1):
+        assert self.cursor
+        return self.cursor.fetchmany(size)
+
+    def fatchone(self):
+        assert self.cursor
+        return self.cursor.fetchone()
+
+    def commit(self):
+        assert self.connection
+        self.connection.commit()
