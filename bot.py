@@ -72,67 +72,28 @@ class BotBehavior:
                     [True if isinstance(evt, i) else False for i in handler.interested]
                 ):
                     continue
-                await handler.handle(evt)
+                asyncio.create_task(handler.handle(evt))
             if evt._.canceled:
                 return
 
-    async def loop(self):
-        while True:
+    async def loop(self, loop):
+        if self.bot.is_running:
             evt = await self.rev()
             await self.process_evt(evt)
-
-    async def run(self, endpoint: str):
-        bot = self.bot
-        if bot.is_running:
-            log.warning("already running")
-            return
-
-        await bot.go.connect("ws://" + endpoint)
-        if not os.path.exists("data/db"):
-            os.makedirs("data/db")
-        await bot.db.connect("data/db/%s.db" % bot.name)
-
-        from services.base import Service
-
-        services = bot.services
-        sort_services(services)
-        from services.core.base import core_services
-
-        sort_services(core_services)
-        services = core_services + services
-        bot.services = [s(bot) if not isinstance(s, Service) else s for s in services]
-        for s in bot.services:
-            await s.start()
-
-        bot.is_running = True
-        print("%s started！" % bot.name)
-        await self.loop()
-
-        log.warning("%s shootdown :(" % bot.name)
-        await self.stop()
-
-    async def stop(self):
-        bot = self.bot
-        if not bot.is_running:
-            log.warning("already closed")
-            return
-
-        await bot.go.disconnect()
-        await bot.db.close()
-        bot.is_running = False
-        print("%s closed!" % bot.name)
+        loop.create_task(self.loop(loop))
+        # loop.call_soon_threadsafe(asyncio.create_task, self.loop(loop))
+        # 使用此方法后运行错误不会抛出
 
     async def rev(self) -> CQHTTPEvent:
         bot = self.bot
         return await bot.go.rev_evt()
 
     async def post_api(self, act: ApiAction):
-        bot = self.bot
-        act._.before_post = True
         await self.process_evt(act)
-        await bot.go.api(act)
-        act._.before_post = False
-        await self.process_evt(act)
+        if act._.canceled:
+            return
+        task = asyncio.create_task(self.bot.go.api(act))
+        task.add_done_callback(act._callback)
 
 
 class Bot:
@@ -145,3 +106,60 @@ class Bot:
         self.behavior = BotBehavior(self)
         self.go = CQHTTPAdapter(self)
         self.db = DataBase(self)
+
+    async def start_up(self, endpoint):
+        if self.is_running:
+            log.warning("already start up!")
+            return
+
+        # init backend
+        go = self.go
+        await go.connect("ws://" + endpoint)
+
+        # init database
+        if not os.path.exists("data/db"):
+            os.makedirs("data/db")
+        db = self.db
+        name = self.name
+        await db.connect("data/db/%s.db" % name)
+        db.execute(
+            "create table if not exists %s (whitelist integer unique,blacklist integer unique)"
+            % (name + "_core")
+        )
+        db.execute(
+            "create table if not exists %s (service text,service_on bool)"
+            % (name + "_service")
+        )
+        db.commit()
+
+        # init services
+        from services.base import Service
+
+        services = self.services
+        sort_services(services)
+        from services.core.base import core_services
+
+        sort_services(core_services)
+        services = core_services + services
+        self.services = [s(self) if not isinstance(s, Service) else s for s in services]
+        db.execute("select service,service_on from %s" % (name + "_service"))
+        db.commit()
+        service_status = db.fatchall()
+        service_status = {s[0]: s[1] for s in service_status}
+        for s in self.services:
+            if not service_status.get(s.__class__.__name__, True):
+                continue
+            await s.start()
+
+        self.is_running = True
+        print("%s start up!" % name)
+
+    async def stop(self):
+        if not self.is_running:
+            log.warning("already closed")
+            return
+
+        await self.go.disconnect()
+        await self.db.close()
+        self.is_running = False
+        print("%s closed!" % self.name)

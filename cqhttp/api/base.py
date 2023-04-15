@@ -1,4 +1,5 @@
 # -- stdlib --
+from asyncio import Future
 from typing import Type, Optional, cast, TypeVar, Generic
 
 # -- third party --
@@ -9,7 +10,7 @@ from cqhttp.base import Event, EventArgs
 
 
 class ApiActionArgs(EventArgs):
-    before_post: bool
+    ...
 
 
 class ResponseBase:
@@ -57,6 +58,9 @@ class ApiAction(Event, Generic[TResponse]):
         assert self.bot
         await self.bot.behavior.post_api(self)
         return self.response
+
+    def _callback(self, future: Future):
+        ...
 
 
 all_apis = []

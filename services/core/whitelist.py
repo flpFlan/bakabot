@@ -21,7 +21,6 @@ class BlockGroup(EventHandler):
         super().__init__(service)
         self.service = cast(WhiteList, self.service)
         service = self.service
-        service.create()
         global whitelist
         self.whitelist = whitelist = service.get()
 
@@ -57,16 +56,10 @@ class Ping(MessageHandler):
 class WhiteList(Service):
     cores = [BlockGroup, Ping]
 
-    def create(self):
-        db = self.bot.db
-        db.execute(
-            "create table if not exists whitelist (group_id integer primary key)"
-        )
-        db.commit()
-
     def get(self) -> set[int]:
-        db = self.bot.db
-        db.execute("select group_id from whitelist")
+        bot = self.bot
+        db = bot.db
+        db.execute("select whitelist from %s" % (bot.name + "_core"))
         result = db.fatchall()
         db.commit()
         return set(group[0] for group in result)
@@ -75,9 +68,12 @@ class WhiteList(Service):
         if group_id in whitelist:
             log.warning("try to add group_id already exist")
             return
-        db = self.bot.db
+        bot = self.bot
+        db = bot.db
 
-        db.execute(f'insert into whitelist (group_id) values ("{group_id}")')
+        db.execute(
+            "insert into %s (whitelist) values (?)" % (bot.name + "_core"), (group_id,)
+        )
         db.commit()
         whitelist.add(group_id)
 
@@ -85,5 +81,11 @@ class WhiteList(Service):
         if group_id not in whitelist:
             log.warning("try to delete group_id not exist")
             return
-        self.bot.db.execute("delete from whitelist where group_id = ?", (group_id,))
+        bot = self.bot
+        bot.db.execute(
+            "delete from %s where whitelist = ?" % (bot.name + "_core"), (group_id,)
+        )
         whitelist.remove(group_id)
+
+    def close(self):
+        log.warning("core service could not be close")

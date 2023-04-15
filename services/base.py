@@ -62,9 +62,26 @@ class Service:
             core.bot = bot
 
     async def start(self):
+        bot = self.bot
+        db = bot.db
+        table = bot.name + "_service"
+        service = self.__class__.__name__
+        db.execute(
+            "insert into %s (service,service_on) values (?,?)" % table, (service, True)
+        )
+        db.commit()
         self.service_on = True
 
     async def close(self):
+        bot = self.bot
+        db = bot.db
+        table = bot.name + "_service"
+        service = self.__class__.__name__
+
+        db.execute(
+            "insert into %s (service,service_on) values (?,?)" % table, (service, False)
+        )
+        db.commit()
         self.service_on = False
 
 
@@ -72,7 +89,7 @@ def register_to(*bots):
     if "all" or "ALL" in bots:
         bots = [b.name for b in Bots]
 
-    def register(cls: Type[Service]):
+    def register(cls):
         for b in Bots:
             if b.name in bots:
                 b.services.append(cls)
