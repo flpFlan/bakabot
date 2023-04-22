@@ -30,6 +30,7 @@ class DataBase:
             self.cursor.execute(sql, params)
         else:
             self.cursor.execute(sql)
+        self.commit()
 
     def fatchall(self):
         assert self.cursor

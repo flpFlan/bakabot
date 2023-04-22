@@ -10,7 +10,7 @@ from cqhttp.api.message.SendMsg import SendMsg
 # -- code --
 
 
-class BakaResponseCore(EventHandler):
+class MessageFailedEchoCore(EventHandler):
     interested = [SendGroupMsg, SendMsg]
 
     async def handle(self, evt: SendGroupMsg | SendMsg):
@@ -28,5 +28,5 @@ class BakaResponseCore(EventHandler):
 
 
 @register_to("ALL")
-class BakaResponse(Service):
-    cores = [BakaResponseCore]
+class MessageFailedEcho(Service):
+    cores = [MessageFailedEchoCore]

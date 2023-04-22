@@ -66,23 +66,24 @@ class BotBehavior:
             from services.base import EventHandler
 
             for handler in service.cores:
+                if not handler.core_on:
+                    continue
                 if not isinstance(handler, EventHandler):
                     continue
                 if not any(
                     [True if isinstance(evt, i) else False for i in handler.interested]
                 ):
                     continue
-                asyncio.create_task(handler.handle(evt))
+                await handler.handle(evt)
             if evt._.canceled:
                 return
 
     async def loop(self, loop):
         if self.bot.is_running:
             evt = await self.rev()
-            await self.process_evt(evt)
-        loop.create_task(self.loop(loop))
+            loop.create_task(self.process_evt(evt))
         # loop.call_soon_threadsafe(asyncio.create_task, self.loop(loop))
-        # 使用此方法后运行错误不会抛出
+        loop.call_soon(asyncio.create_task, self.loop(loop))
 
     async def rev(self) -> CQHTTPEvent:
         bot = self.bot
@@ -122,15 +123,7 @@ class Bot:
         db = self.db
         name = self.name
         await db.connect("data/db/%s.db" % name)
-        db.execute(
-            "create table if not exists %s (whitelist integer unique,blacklist integer unique)"
-            % (name + "_core")
-        )
-        db.execute(
-            "create table if not exists %s (service text,service_on bool)"
-            % (name + "_service")
-        )
-        db.commit()
+        db.execute("create table if not exists services (service text,service_on bool)")
 
         # init services
         from services.base import Service
@@ -142,7 +135,7 @@ class Bot:
         sort_services(core_services)
         services = core_services + services
         self.services = [s(self) if not isinstance(s, Service) else s for s in services]
-        db.execute("select service,service_on from %s" % (name + "_service"))
+        db.execute("select service,service_on from services")
         db.commit()
         service_status = db.fatchall()
         service_status = {s[0]: s[1] for s in service_status}

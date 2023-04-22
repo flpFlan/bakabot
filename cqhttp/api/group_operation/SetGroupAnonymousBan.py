@@ -1,6 +1,7 @@
 """群匿名用户禁言"""
 from typing import Optional
 from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from cqhttp.events.message import GroupMessage
 
 
 @register_to_api
@@ -13,7 +14,7 @@ class SetGroupAnonymousBan(ApiAction[ResponseBase]):
         self,
         group_id: int,
         *,
-        anonymous: object = None,
+        anonymous: GroupMessage.Anonymous | None = None,
         anonymous_flag: str = "",
         duration: int = 30 * 60,
         echo: Optional[str] = None

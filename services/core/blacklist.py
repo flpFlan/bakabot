@@ -32,10 +32,16 @@ class BlockUser(EventHandler):
 class BlackList(Service):
     cores = [BlockUser]
 
+    def __init__(self, bot):
+        super().__init__(bot)
+        self.bot.db.execute(
+            "create table if not exists blacklist (qq_number integer unique)"
+        )
+
     def get(self) -> set[int]:
         bot = self.bot
         db = bot.db
-        db.execute("select blacklist from %s" % (bot.name + "_core"))
+        db.execute("select qq_number from blacklist")
         result = db.fatchall()
         db.commit()
         return set(group[0] for group in result)
@@ -46,10 +52,9 @@ class BlackList(Service):
             return
         bot = self.bot
         db = bot.db
-        table = bot.name + "_core"
 
         db.execute(
-            f"insert into %s (blacklist) values (?)" % table,
+            f"insert into blacklist (qq_number) values (?)",
             (qq_number,),
         )
         db.commit()
@@ -57,11 +62,10 @@ class BlackList(Service):
 
     def delete(self, qq_number: int):
         if qq_number not in blacklist:
-            log.warning("try to delete group_id not exist")
+            log.warning("try to delete qq_number not exist")
             return
         bot = self.bot
-        table = bot.name + "_core"
-        bot.db.execute("delete from %s where blacklist = ?" % table, (qq_number,))
+        bot.db.execute("delete from blacklist where qq_number = ?", (qq_number,))
         blacklist.remove(qq_number)
 
     def close(self):

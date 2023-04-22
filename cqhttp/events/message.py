@@ -95,11 +95,16 @@ class GroupMessage(Message):
         role: str
         title: str
 
+    class Anonymous:
+        id: int
+        name: str
+        flag: str
+
     message_type = "group"
 
     sender: Sender
     group_id: int
-    anonymous: dict | None
+    anonymous: Anonymous | None
 
     def __init__(self):
         super().__init__()

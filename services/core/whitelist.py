@@ -4,10 +4,11 @@ from typing import cast
 
 # -- third party --
 # -- own --
-from services.base import EventHandler, MessageHandler, Service
+from services.base import EventHandler, IMessageFliter, Service
 from services.core.base import core_service
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+from cqhttp.api.group_operation.SetGroupLeave import SetGroupLeave
 
 # -- code --
 log = logging.getLogger("bot.service.whitelist")
@@ -29,9 +30,9 @@ class BlockGroup(EventHandler):
             evt.cancel()
 
 
-class Ping(MessageHandler):
+class Ping(EventHandler, IMessageFliter):
     interested = [GroupMessage]
-    entrys = [r"^(?P<ping>/ping)$", r"^(?P<delete>/delete)$"]
+    entrys = [r"^(?P<ping>/ping)$", r"^(?P<delete>/delete)$", r"^(?P<leave>/leave)$"]
 
     async def handle(self, evt: GroupMessage):
         sender = evt.user_id
@@ -50,16 +51,24 @@ class Ping(MessageHandler):
                 await SendGroupMsg(id, "%s已在本群启用！" % bot.name).do(bot)
             if r.get("delete", None):
                 service.delete(id)
+            if r.get("leave", None):
+                await SetGroupLeave(evt.group_id).do(bot)
 
 
 @core_service
 class WhiteList(Service):
     cores = [BlockGroup, Ping]
 
+    def __init__(self, bot):
+        super().__init__(bot)
+        self.bot.db.execute(
+            "create table if not exists whitelist (group_id integer unique)"
+        )
+
     def get(self) -> set[int]:
         bot = self.bot
         db = bot.db
-        db.execute("select whitelist from %s" % (bot.name + "_core"))
+        db.execute("select group_id from whitelist")
         result = db.fatchall()
         db.commit()
         return set(group[0] for group in result)
@@ -71,9 +80,7 @@ class WhiteList(Service):
         bot = self.bot
         db = bot.db
 
-        db.execute(
-            "insert into %s (whitelist) values (?)" % (bot.name + "_core"), (group_id,)
-        )
+        db.execute("insert into whitelist (group_id) values (?)", (group_id,))
         db.commit()
         whitelist.add(group_id)
 
@@ -82,9 +89,7 @@ class WhiteList(Service):
             log.warning("try to delete group_id not exist")
             return
         bot = self.bot
-        bot.db.execute(
-            "delete from %s where whitelist = ?" % (bot.name + "_core"), (group_id,)
-        )
+        bot.db.execute("delete from whitelist where group_id = ?", (group_id,))
         whitelist.remove(group_id)
 
     def close(self):

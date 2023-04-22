@@ -57,7 +57,7 @@ class CQHTTPAdapter:
             success = await self.reconnect()
             if not success:
                 log.error("max retry reached, %sshootdown", self.bot.name)
-                await self.bot.behavior.stop()
+                await self.bot.stop()
                 raise Exception("Max Retry Reached")
             raw = await self.evt_connection.recv()
         return cast(str, raw)
@@ -97,7 +97,7 @@ class CQHTTPAdapter:
             success = await self.reconnect()
             if not success:
                 log.error("max retry reached, %sshootdown", self.bot.name)
-                await self.bot.behavior.stop()
+                await self.bot.stop()
                 raise Exception("Max Retry Reached")
             await self.api_connection.send(data)
             result = await self.api_connection.recv()
@@ -120,7 +120,7 @@ class CQHTTPAdapter:
     def trans_action_to_json(act: ApiAction) -> dict:
         result = {}
         for name, value in act.__dict__.items():
-            if name in ("bot", "_", "response"):
+            if name in ("bot", "_", "response", "_callback"):
                 continue
             if isinstance(value, list):
                 l = []
@@ -138,9 +138,9 @@ class CQHTTPAdapter:
 def set_attr(obj, attrs: dict):
     for name, value in attrs.items():
         if isinstance(value, dict):
-            sub_obj = obj.__annotations__.get(name)
+            sub_obj = obj.__annotations__.get(name)()
             assert sub_obj
-            set_attr(sub_obj(), value)
+            set_attr(sub_obj, value)
             setattr(obj, name, sub_obj)
         elif isinstance(value, list):
             l = []

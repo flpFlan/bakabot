@@ -1,9 +1,11 @@
 # -- stdlib --
 import logging
-from typing import Type, cast
+from typing import Type, Union, cast
 from re import compile
 
 # -- third party --
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
 # -- own --
 from config import Bots
 
@@ -13,11 +15,21 @@ log = logging.getLogger("bot.service")
 
 
 class ServiceCore:
+    core_on = False
+
     def __init__(self, service):
         from bot import Bot
 
         self.service = service = cast(Service, service)
         self.bot = getattr(self, "bot", None) or cast(Bot, None)
+        if isinstance(self, IMessageFliter):
+            IMessageFliter.__init__(self)
+
+    def run(self):
+        self.core_on = True
+
+    def close(self):
+        self.core_on = False
 
 
 class EventHandler(ServiceCore):
@@ -29,15 +41,13 @@ class EventHandler(ServiceCore):
         ...  # to override it
 
 
-class MessageHandler(EventHandler):
+class IMessageFliter:
     from cqhttp.events.message import Message
 
-    interested: list[Type[Message]]
     entrys = []
     entry_flags = 0
 
-    def __init__(self, service):
-        super().__init__(service)
+    def __init__(self):
         entry = self.entrys
         self.entrys = [compile(et, self.entry_flags) for et in entry]
 
@@ -45,8 +55,30 @@ class MessageHandler(EventHandler):
         msg = evt.message
         for _entry in self.entrys:
             if match := _entry.match(msg):
-                r = match.groupdict()
                 return match.groupdict()
+
+
+class SheduledHandler(ServiceCore):
+    shedule_trigger: str
+    args: dict
+
+    def run(self):
+        self.jobs = jobs = []
+        self.scheduler = scheduler = AsyncIOScheduler()
+        if self.shedule_trigger == "interval":
+            jobs.append(scheduler.add_job(self.handle, "interval", **self.args))
+        if self.shedule_trigger == "cron":
+            jobs.append(scheduler.add_job(self.handle, "cron", **self.args))
+        scheduler.start()
+
+    def close(self):
+        super().close()
+        for job in self.jobs:
+            job.remove()
+        self.jobs = []
+
+    async def handle(self):
+        ...
 
 
 class Service:
@@ -56,32 +88,37 @@ class Service:
     execute_after = []
 
     def __init__(self, bot):
-        self.bot = bot
-        self.cores = [core(self) for core in self.cores]
+        from bot import Bot
+
+        self.bot = bot = cast(Bot, bot)
+        self.cores = [core(self) for core in self.cores]  # type: ignore
+        self.cores = cast(list[ServiceCore], self.cores)
         for core in self.cores:
             core.bot = bot
 
     async def start(self):
         bot = self.bot
         db = bot.db
-        table = bot.name + "_service"
         service = self.__class__.__name__
         db.execute(
-            "insert into %s (service,service_on) values (?,?)" % table, (service, True)
+            "insert into services (service,service_on) values (?,?)", (service, True)
         )
         db.commit()
+        for core in self.cores:
+            core.run()
         self.service_on = True
 
     async def close(self):
         bot = self.bot
         db = bot.db
-        table = bot.name + "_service"
         service = self.__class__.__name__
 
         db.execute(
-            "insert into %s (service,service_on) values (?,?)" % table, (service, False)
+            "insert into services (service,service_on) values (?,?)", (service, False)
         )
         db.commit()
+        for core in self.cores:
+            core.close()
         self.service_on = False
 
 

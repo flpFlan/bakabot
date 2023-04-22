@@ -24,6 +24,6 @@ async def start_bot(loop):
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     loop.run_until_complete(start_bot(loop))
     loop.run_forever()
