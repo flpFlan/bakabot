@@ -23,4 +23,7 @@ from .nowday_cp import NowdayCP
 from .welcome_newcomer import WelcomeNewcomer
 from .on_new_friend_group import OnNewFriendGroup
 from .choose_or import ChooseOr
+from .barber_shop import BarberShop
+from .kfy import KFC
+from .roll import Roll
 from .game import *

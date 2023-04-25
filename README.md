@@ -165,12 +165,12 @@ servers:
 - [x] 每日CP
 - [ ] 查成分
 - [ ] 翻译
-- [ ] 发电
+- [x] [发电](https://github.com/xipesoy/zhenxun_plugin_meiriyiju)
 - [ ] 查询thb
 - [x] 选择...还是...
 - [ ] 迷你英文
-- [ ] 疯狂星期四文案生成
-- [ ] 掷骰
+- [x] 疯狂星期四文案生成
+- [x] 掷骰
 - [ ] 聊天
 - [ ] 复读
 - [x] 俄罗斯轮盘
