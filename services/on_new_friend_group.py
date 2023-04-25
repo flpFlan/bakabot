@@ -3,6 +3,7 @@
 # -- third party --
 # -- own --
 import asyncio
+from cqhttp.api.message.SendPrivateMsg import SendPrivateMsg
 from services.base import register_to, Service, EventHandler
 from cqhttp.events.request import FriendRequest, GroupInviteRequest
 from cqhttp.events.notice import GroupMemberLeaveDecreased
@@ -10,6 +11,7 @@ from cqhttp.api.message.SendMsg import SendMsg
 from cqhttp.api.handle.SetFriendAddRequest import SetFriendAddRequest
 from cqhttp.api.handle.SetGroupAddRequest import SetGroupAddRequest
 from services.core.whitelist import WhiteList
+from config import Administrators
 
 # -- code --
 
@@ -25,15 +27,18 @@ class OnNewFriendGroupCore(EventHandler):
             return
 
         if isinstance(evt, FriendRequest):
+            m = f"有新的好友请求:\nuser:\n{evt.user_id}\ncomment:\n{evt.comment}"
             await SetFriendAddRequest(evt.flag, True).do(self.bot)
             msg_type = "friend"
             arg = evt.user_id
         elif isinstance(evt, GroupInviteRequest):
+            m = f"有新的群聊邀请:\nuser:\n{evt.user_id}\ngroup:\n{evt.group_id}\ncomment:\n{evt.comment}"
             await SetGroupAddRequest(evt.flag, "invite", True).do(self.bot)
             msg_type = "group"
             arg = evt.group_id
 
         asyncio.ensure_future(self.echo(msg_type, arg))
+        SendPrivateMsg.many(Administrators, m).do(self.bot)
 
     async def echo(self, msg_type, arg):
         if msg_type == "friend":
