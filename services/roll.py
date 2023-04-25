@@ -1,13 +1,11 @@
 # -- stdlib --
 # -- third party --
 import random
-from typing import cast
 
 # -- own --
 from services.base import register_to, Service, EventHandler, IMessageFilter
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
-from utils.request import Request
 
 # -- code --
 
@@ -23,16 +21,19 @@ class RollCore(EventHandler, IMessageFilter):
         args = map(lambda x: x.strip(), args)
 
         result = 0
+        exps = []
         for arg in args:
             if arg.isdigit():
                 result += int(arg)
+                exps.append(arg)
             else:
                 c, l = arg.split("d")
                 c = c or 1
                 l = l or 100
                 c, l = int(c), int(l)
                 result += sum(random.randint(1, l) for _ in range(c))
-        m = f"[{evt.sender.card or evt.sender.nickname}]掷骰:{''.join(args)}={result}"
+                exps.append(f"{c}d{l}")
+        m = f"[{evt.sender.card or evt.sender.nickname}]掷骰:{'+'.join(exps)}={result}"
 
         await SendGroupMsg(evt.group_id, m).do(self.bot)
 

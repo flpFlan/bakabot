@@ -10,7 +10,7 @@ from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
 
 # -- code --
-url = "https://github.com/xipesoy/zhenxun_plugin_meiriyiju/blob/main/resource/post.json"
+url = "https://raw.githubusercontent.com/xipesoy/zhenxun_plugin_meiriyiju/main/resource/post.json"
 
 
 class BarberShopCore(EventHandler, IMessageFilter):

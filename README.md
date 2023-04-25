@@ -169,7 +169,7 @@ servers:
 - [ ] 查询thb
 - [x] 选择...还是...
 - [ ] 迷你英文
-- [x] 疯狂星期四文案生成
+- [x] [疯狂星期四文案生成](https://github.com/whitescent/KFC-Crazy-Thursday)
 - [x] 掷骰
 - [ ] 聊天
 - [ ] 复读

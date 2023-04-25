@@ -10,7 +10,8 @@ from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
 
 # -- code --
-url = "https://github.com/whitescent/KFC-Crazy-Thursday/blob/main/kfc.json"
+url = "https://raw.githubusercontent.com/Nthily/KFC-Crazy-Thursday/main/kfc.json"
+url2 = "https://gitee.com/Nicr0n/fucking_crazy_thursday/raw/master/post.json"
 
 
 class KFCCore(EventHandler):
@@ -19,10 +20,10 @@ class KFCCore(EventHandler):
     async def handle(self, evt: GroupMessage):
         if not evt.message == "疯狂星期四文案生成":
             return
-        service = cast(KFC,self.service)
-        m=random.choice(service.texts)
+        service = cast(KFC, self.service)
+        m = random.choice(service.texts)
 
-        await SendGroupMsg(evt.group_id,m).do(self.bot)
+        await SendGroupMsg(evt.group_id, m).do(self.bot)
 
 
 @register_to("ALL")
@@ -35,5 +36,7 @@ class KFC(Service):
 
     def get_texts(self):
         r = Request.get(url).json()
-
-        return [t["text"] for t in r]
+        texts = [t["text"] for t in r]
+        r = Request.get(url2).json()
+        texts.extend(r["post"])
+        return texts

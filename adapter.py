@@ -2,6 +2,7 @@
 import json, logging, asyncio
 from typing import cast
 from urllib.parse import urljoin
+import websockets
 
 # -- third party --
 from websockets.client import connect
