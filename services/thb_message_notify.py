@@ -1,135 +1,143 @@
 # -- stdlib --
-import argparse
-import html
-import re
+import asyncio
+import json
+import logging
+from threading import Thread
+import time
 from typing import cast
 
 # -- third party --
-from sqlalchemy import create_engine, text as sq_text
 import redis
 
 # -- own --
-from services.base import register_to, Service, SheduledHandler
+from services.base import (
+    register_to,
+    Service,
+    ServiceCore,
+    EventHandler,
+    IMessageFilter,
+)
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+from cqhttp.events.message import GroupMessage
 
 
 # -- code --
+URL = "redis://localhost:6379"
+
+log = logging.getLogger("bot.service.thbMessage")
 thb_notify_groups = set()
 
 
-class THBMessageNotifyCore(SheduledHandler):
+ServerNames = {
+    b"forum": "论坛",
+    b"localhost": "本机",
+    b"lake": "雾之湖",
+    b"forest": "魔法之森",
+    b"hakurei": "博丽神社",
+    b"aya": "文文专访",
+}
+
+
+class THBMessageNotifyCore(ServiceCore):
     shedule_trigger = "interval"
-    args = {"seconds": 5}
+    args = {"seconds": 1}
 
-    def __init__(self, service):
-        super().__init__(service)
-        parser = argparse.ArgumentParser("forum_noti")
-        parser.add_argument("--redis-url", default="redis://localhost:6379")
-        parser.add_argument(
-            "--connect-str", default="mysql://root@localhost/ultrax?charset=utf8"
+    def run(self):
+        super().run()
+
+        self.sub = sub = redis.from_url(URL).pubsub()
+        sub.psubscribe("thb.*")
+
+        self.flag = False
+        from threading import Thread
+
+        self.thread = thread = Thread(target=self.loop, name="thb_message_notify")
+        thread.start()
+
+    def loop(self):
+        while not self.flag:
+            try:
+                for msg in self.sub.listen():
+                    if self.flag:
+                        return
+                    if msg["type"] not in ("message", "pmessage"):
+                        continue
+
+                    _, node, topic = msg["channel"].split(b".")[:3]
+                    if not topic == b"speaker":
+                        continue
+                    message = json.loads(msg["data"])
+
+                    self.on_message(node, message)
+            except Exception as e:
+                log.error(e)
+
+            finally:
+                time.sleep(1)
+
+    def on_message(self, node, message):
+        username, content = message
+
+        import random, re
+
+        foo = str(random.randint(0x10000000, 0xFFFFFFFF))
+        content = content.replace("||", foo)
+        content = re.sub(
+            r"([\r\n]|\|(c[A-Fa-f0-9]{8}|s[12][A-Fa-f0-9]{8}|[BbIiUuHrRGYW]|LB|DB|![RGOB]))",
+            "",
+            content,
         )
-        parser.add_argument("--discuz-dbpre", default="pre_")
-        parser.add_argument("--forums", default="2,36,38,40,78,82")
-        parser.add_argument("--forums-thread-only", default="78")
-        options = parser.parse_args()
-        self.text = text = lambda t: sq_text(t.replace("cdb_", options.discuz_dbpre))
+        content = content.replace(foo, "||")
 
-        self.engine = engine = create_engine(
-            options.connect_str,
-            encoding="utf-8",
-            convert_unicode=True,
+        send = "{}『文々。新闻』{}： {}".format(
+            ServerNames.get(node, node),
+            username,
+            content,
         )
-        self.forum_ids = forum_ids = map(int, options.forums.split(","))
-        forums = engine.execute(
-            text(
-                """
-                SELECT fid, name FROM cdb_forum_forum
-                WHERE fid IN :fids
-                """
-            ),
-            fids=forum_ids,
-        ).fetchall()
-        self.forums = forums = {i.fid: i.name for i in forums}
-        self.r = r = redis.from_url(options.redis_url)
-        self.pid = int(r.get("aya:forum_lastpid") or 495985)
-        self.post_template = "|G{user}|r在|G{forum}|r发表了新主题|G{subject}|r：{excerpt}"
-        self.reply_template = "|G{user}|r回复了|G{forum}|r的主题|G{subject}|r：{excerpt}"
-        self.threads_only = set(map(int, options.forums_thread_only.split(",")))
-
-    async def handle(self):
-        bot = self.bot
         service = cast(THBMessageNotify, self.service)
+        bot = self.bot
+        SendGroupMsg.many(service.thb_notify_groups, send).do(bot, interval=1)
 
-        engine = self.engine
-        text = self.text
-        pid = self.pid
-        forum_ids = self.forum_ids
-        r = self.r
-        forums = self.forums
-        threads_only = self.threads_only
-        posts = engine.execute(
-            text(
-                """
-            SELECT * FROM cdb_forum_post
-            WHERE pid > :pid AND
-                  fid IN :fids
-            ORDER BY pid ASC
-        """
-            ),
-            pid=pid,
-            fids=forum_ids,
-        )
-        if not posts:
+    def close(self):
+        super().close()
+        self.flag = True
+
+
+class NotifyGroupManager(EventHandler, IMessageFilter):
+    interested = [GroupMessage]
+    entrys = [r"^/thb_message (?P<action>on|off)$"]
+
+    async def handle(self, evt: GroupMessage):
+        from config import Administrators
+
+        if evt.user_id not in Administrators:
             return
-        for p in posts:
-            if not p.first and p.fid in threads_only:
-                continue
-
-            t = engine.execute(
-                text(
-                    """
-                SELECT * FROM cdb_forum_thread
-                WHERE tid = :tid
-            """
-                ),
-                tid=p.tid,
-            ).fetchone()
-
-            template = self.post_template if p.first else self.reply_template
-
-            excerpt = p.message.replace("\n", "")
-            excerpt = html.unescape(excerpt)
-            excerpt = re.sub(r"\[quote\].*?\[/quote\]", "", excerpt)
-            excerpt = re.sub(r"\[img\].*?\[/img\]", "[图片]", excerpt)
-            excerpt = re.sub(r"\[.+?\]", "", excerpt)
-            excerpt = re.sub(r"\{:.+?:\}", "[表情]", excerpt)
-            excerpt = re.sub(r" +", " ", excerpt)
-            excerpt = excerpt.strip()
-            if len(excerpt) > 60:
-                excerpt = excerpt[:60] + "……"
-
-            msg = template.format(
-                user=p.author,
-                forum=forums[t.fid],
-                subject=t.subject,
-                excerpt=excerpt,
-            )
-            pid = p.pid
-            SendGroupMsg.many(service.thb_notify_groups, msg).do(bot)
-        r.set("aya:forum_lastpid", pid)
+        if r := self.filter(evt):
+            action = r.get("action", None)
+            bot = self.bot
+            service = cast(THBMessageNotify, self.service)
+            group_id = evt.group_id
+            if action == "on":
+                service.add_notify_group(group_id)
+                await SendGroupMsg(group_id, "THBMessageNotify已启用").do(bot)
+            if action == "off":
+                service.del_notify_group(group_id)
+                await SendGroupMsg(group_id, "THBMessageNotify已关闭").do(bot)
 
 
-# @register_to("ALL")
+@register_to("Aya")
 class THBMessageNotify(Service):
-    cores = [THBMessageNotifyCore]
+    cores = [NotifyGroupManager, THBMessageNotifyCore]
 
     async def start(self):
+        await super().start()
         from bot import Bot
 
         bot = cast(Bot, self.bot)
         bot.db.execute(
             "create table if not exists thb_notify_groups (group_id integer unique)"
         )
+        global thb_notify_groups
         self.thb_notify_groups = thb_notify_groups = self.get_notify_group()
 
     def get_notify_group(self) -> set[int]:

@@ -16,8 +16,8 @@ blacklist: set[int] = set()
 class BlockUser(EventHandler):
     interested = [Message]
 
-    def __init__(self, service):
-        super().__init__(service)
+    def run(self):
+        super().run()
         self.service = cast(BlackList, self.service)
         service = self.service
         global blacklist

@@ -5,8 +5,8 @@ from typing import cast
 # -- third party --
 # -- own --
 from services.core.base import core_service
-from services.base import EventHandler, Service, IMessageFliter
-from cqhttp.events.base import Event
+from services.base import EventHandler, Service, IMessageFilter
+from cqhttp.base import Event
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
@@ -17,14 +17,20 @@ log = logging.getLogger("bot.service.coreManager")
 class BlockGroup(EventHandler):
     interested = [Event]
 
-    async def run(self):
+    def run(self):
         super().run()
         db = self.bot.db
         db.execute("create table if not exists blockgroups (group_id integer unique)")
         self.blockgroups = self.get()
+        BlockGroup.instance = self
 
     async def handle(self, evt: Event):
-        ...
+        if group_id := getattr(evt, "group_id", None):
+            if group_id in self.blockgroups:
+                if isinstance(evt, SendGroupMsg):
+                    if evt._.args.get("bot off", None):
+                        return
+                evt.cancel()
 
     def get(self) -> set[int]:
         bot = self.bot
@@ -54,11 +60,11 @@ class BlockGroup(EventHandler):
         bot.db.execute("delete from blockgroups where group_id = ?", (group_id,))
         blockgroups.remove(group_id)
 
-    async def close(self):
+    def close(self):
         pass
 
 
-class BotControl(EventHandler, IMessageFliter):
+class BotControl(EventHandler, IMessageFilter):
     interested = [GroupMessage]
     entrys = [r"^/bot on$", r"^/bot off$"]
 
@@ -67,17 +73,23 @@ class BotControl(EventHandler, IMessageFliter):
 
         if not (evt.sender.role in ("owner", "admin") or evt.user_id in Administrators):
             return
+        bot = self.bot
         msg = evt.message
+        group_id = evt.group_id
         if msg == "/bot on":
-            ...
+            BlockGroup.instance.delete(group_id)
+            await SendGroupMsg(group_id, f"{bot.name} running！").do(bot)
         if msg == "/bot off":
-            ...
+            BlockGroup.instance.add(group_id)
+            c = SendGroupMsg(group_id, f"{bot.name} closed")
+            c._.args["bot off"] = True
+            await c.do(bot)
 
-    async def close(self):
+    def close(self):
         pass
 
 
-class ServiceControl(EventHandler, IMessageFliter):
+class ServiceControl(EventHandler, IMessageFilter):
     interested = [GroupMessage]
     entrys = [
         r"^/(?P<get>get)$",
@@ -88,17 +100,19 @@ class ServiceControl(EventHandler, IMessageFliter):
     async def handle(self, evt: GroupMessage):
         from config import Administrators
 
-        if not (evt.sender.role in ("owner", "admin") or evt.user_id in Administrators):
+        if not evt.user_id in Administrators:
             return
-        if r := self.fliter(evt):
+        if r := self.filter(evt):
+            group_id = evt.group_id
             if r.get("get", None):
-                ...
+                bot = self.bot
+                await SendGroupMsg(group_id, str(self.get_all_services())).do(bot)
             if s := r.get("service_to_close", None):
-                await self.close_service(evt.group_id, s)
+                await self.close_service(group_id, s)
             if s := r.get("service_to_start", None):
-                await self.start_service(evt.group_id, s)
+                await self.start_service(group_id, s)
 
-    async def get_all_services(self):
+    def get_all_services(self):
         bot = self.bot
         graph = {
             service.__class__.__name__: service.service_on for service in bot.services
@@ -125,10 +139,10 @@ class ServiceControl(EventHandler, IMessageFliter):
                 await s.start()
                 await SendGroupMsg(group_id, f"{service}已开启").do(bot)
 
-    async def close(self):
+    def close(self):
         pass
 
 
 @core_service
 class CoreManager(Service):
-    cores = [BotControl, ServiceControl, BlockGroup]
+    cores = [BlockGroup, BotControl, ServiceControl]

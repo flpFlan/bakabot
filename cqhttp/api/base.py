@@ -10,7 +10,9 @@ from cqhttp.base import Event, EventArgs
 
 
 class ApiActionArgs(EventArgs):
-    ...
+    def __init__(self):
+        super().__init__()
+        self.args = {}
 
 
 class ResponseBase:
@@ -59,7 +61,7 @@ class ApiAction(Event, Generic[TResponse]):
         await self.bot.behavior.post_api(self)
         return self.response
 
-    def _callback(self, future: Future):
+    def _callback(self):
         ...
 
 

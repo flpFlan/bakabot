@@ -6,14 +6,24 @@ from urllib.parse import urljoin
 # -- third party --
 from websockets.client import connect
 from websockets.exceptions import ConnectionClosedError
+from tenacity import retry, wait_fixed, stop_after_attempt
 
 # -- own --
+from options import MAX_CONNECT_RETRIES
 from cqhttp.events.base import CQHTTPEvent
 from cqhttp.events.base import all_events
 from cqhttp.api.base import ApiAction
 
 # -- code --
 log = logging.getLogger("bot")
+# lock = asyncio.Lock()
+
+
+async def _callback(x):
+    bot = x.args[0].bot
+    await bot.stop()
+    log.error("max retry reached, %sshootdown", bot.name)
+    raise Exception("Max Retry Reached")
 
 
 class CQHTTPAdapter:
@@ -22,28 +32,14 @@ class CQHTTPAdapter:
 
         self.bot = bot = cast(Bot, bot)
 
+    @retry(
+        wait=wait_fixed(1),
+        stop=stop_after_attempt(MAX_CONNECT_RETRIES),
+        retry_error_callback=lambda x: asyncio.ensure_future(_callback(x)),
+    )
     async def connect(self, uri: str):
         self.evt_connection = await connect(urljoin(uri, "/event"), ping_interval=None)
         self.api_connection = await connect(urljoin(uri, "/api"), ping_interval=None)
-
-    async def reconnect(self) -> bool:
-        from config import MAX_CONNECT_RETRIES
-
-        host = self.api_connection.host or self.evt_connection.host
-        port = self.api_connection.port or self.evt_connection.port
-        assert host and port
-
-        current_retry = 0
-        while current_retry < MAX_CONNECT_RETRIES or MAX_CONNECT_RETRIES < 0:
-            try:
-                await self.connect(host + ":" + str(port))
-                log.info("reconnect success")
-                return True
-            except:
-                log.warning("%s times retry failed", current_retry + 1)
-            await asyncio.sleep(1)
-            current_retry += 1
-        return False
 
     async def disconnect(self):
         await self.evt_connection.close()
@@ -54,11 +50,10 @@ class CQHTTPAdapter:
             raw = await self.evt_connection.recv()
         except ConnectionClosedError:
             log.warning("go-cqhttp connection shootdown,attempting to reconnect...")
-            success = await self.reconnect()
-            if not success:
-                log.error("max retry reached, %sshootdown", self.bot.name)
-                await self.bot.stop()
-                raise Exception("Max Retry Reached")
+            host = self.api_connection.host
+            port = self.api_connection.port
+            assert host and port
+            await self.connect(host + ":" + str(port))
             raw = await self.evt_connection.recv()
         return cast(str, raw)
 
@@ -89,18 +84,19 @@ class CQHTTPAdapter:
             form["echo"] = echo
 
         data = json.dumps(form)
+        # async with lock:
         try:
             await self.api_connection.send(data)
             result = await self.api_connection.recv()
         except ConnectionClosedError:
             log.warning("go-cqhttp connection shootdown,attempting to reconnect...")
-            success = await self.reconnect()
-            if not success:
-                log.error("max retry reached, %sshootdown", self.bot.name)
-                await self.bot.stop()
-                raise Exception("Max Retry Reached")
+            host = self.api_connection.host
+            port = self.api_connection.port
+            assert host and port
+            await self.connect(host + ":" + str(port))
             await self.api_connection.send(data)
             result = await self.api_connection.recv()
+
         return json.loads(result)
 
     @staticmethod
@@ -139,19 +135,50 @@ def set_attr(obj, attrs: dict):
     for name, value in attrs.items():
         if isinstance(value, dict):
             sub_obj = obj.__annotations__.get(name)()
-            assert sub_obj
             set_attr(sub_obj, value)
             setattr(obj, name, sub_obj)
         elif isinstance(value, list):
             l = []
             for i in value:
                 if isinstance(i, dict):
-                    o = object()
+                    o = obj.__annotations__.get(name, object).__args__[0]()
                     set_attr(o, i)
                     l.append(o)
                 else:
-                    l.append(0)
+                    l.append(i)
             setattr(obj, name, l)
 
         else:
             setattr(obj, name, value)
+
+
+class P_CQHTTPAdapter(CQHTTPAdapter):
+    def __init__(self, bot):
+        super().__init__(bot)
+        import requests
+
+        self.session = requests.Session()
+
+    @retry(
+        wait=wait_fixed(1),
+        stop=stop_after_attempt(MAX_CONNECT_RETRIES),
+        retry_error_callback=lambda x: asyncio.run(_callback(x)),
+    )
+    async def connect(self, evt_uri: str, api_uri: str):
+        self.evt_connection = await connect(
+            urljoin(evt_uri, "/event"), ping_interval=None
+        )
+        self.api_uri = api_uri
+
+    async def _api(self, action: str, echo="", **params) -> dict:
+        form = {}
+        form["action"] = action
+        if params:
+            form["params"] = dict(**params)
+        if echo:
+            form["echo"] = echo
+
+        data = json.dumps(form)
+        r = self.session.post(self.api_uri, json=data)
+        r.raise_for_status()
+        return r.json()

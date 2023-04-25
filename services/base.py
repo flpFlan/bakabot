@@ -1,10 +1,12 @@
 # -- stdlib --
+import asyncio
 import logging
-from typing import Type, Union, cast
+from typing import Type, cast
 from re import compile
 
 # -- third party --
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # -- own --
 from config import Bots
@@ -20,10 +22,10 @@ class ServiceCore:
     def __init__(self, service):
         from bot import Bot
 
-        self.service = service = cast(Service, service)
+        self.service = service
         self.bot = getattr(self, "bot", None) or cast(Bot, None)
-        if isinstance(self, IMessageFliter):
-            IMessageFliter.__init__(self)
+        if isinstance(self, IMessageFilter):
+            IMessageFilter.__init__(self)
 
     def run(self):
         self.core_on = True
@@ -41,7 +43,7 @@ class EventHandler(ServiceCore):
         ...  # to override it
 
 
-class IMessageFliter:
+class IMessageFilter:
     from cqhttp.events.message import Message
 
     entrys = []
@@ -51,7 +53,7 @@ class IMessageFliter:
         entry = self.entrys
         self.entrys = [compile(et, self.entry_flags) for et in entry]
 
-    def fliter(self, evt: Message):
+    def filter(self, evt: Message):
         msg = evt.message
         for _entry in self.entrys:
             if match := _entry.match(msg):
@@ -63,18 +65,26 @@ class SheduledHandler(ServiceCore):
     args: dict
 
     def run(self):
+        super().run()
         self.jobs = jobs = []
-        self.scheduler = scheduler = AsyncIOScheduler()
+        self.scheduler = scheduler = BackgroundScheduler()  # AsyncIOScheduler()
         if self.shedule_trigger == "interval":
-            jobs.append(scheduler.add_job(self.handle, "interval", **self.args))
+            jobs.append(
+                scheduler.add_job(
+                    lambda: asyncio.run(self.handle()), "interval", **self.args
+                )
+            )
         if self.shedule_trigger == "cron":
-            jobs.append(scheduler.add_job(self.handle, "cron", **self.args))
+            jobs.append(
+                scheduler.add_job(
+                    lambda: asyncio.run(self.handle()), "cron", **self.args
+                )
+            )
         scheduler.start()
 
     def close(self):
         super().close()
-        for job in self.jobs:
-            job.remove()
+        self.scheduler.remove_all_jobs()
         self.jobs = []
 
     async def handle(self):
@@ -82,6 +92,7 @@ class SheduledHandler(ServiceCore):
 
 
 class Service:
+    priority = 3
     service_on = False
     cores = []
     execute_before = []
@@ -101,7 +112,10 @@ class Service:
         db = bot.db
         service = self.__class__.__name__
         db.execute(
-            "insert into services (service,service_on) values (?,?)", (service, True)
+            """
+            insert or replace into services (service,service_on) values (?,?)
+            """,
+            (service, True),
         )
         db.commit()
         for core in self.cores:
@@ -114,7 +128,8 @@ class Service:
         service = self.__class__.__name__
 
         db.execute(
-            "insert into services (service,service_on) values (?,?)", (service, False)
+            "insert or replace into services (service,service_on) values (?,?)",
+            (service, False),
         )
         db.commit()
         for core in self.cores:

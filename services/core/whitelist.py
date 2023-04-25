@@ -4,7 +4,7 @@ from typing import cast
 
 # -- third party --
 # -- own --
-from services.base import EventHandler, IMessageFliter, Service
+from services.base import EventHandler, IMessageFilter, Service
 from services.core.base import core_service
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
@@ -18,8 +18,8 @@ whitelist: set[int] = set()
 class BlockGroup(EventHandler):
     interested = [GroupMessage]
 
-    def __init__(self, service):
-        super().__init__(service)
+    def run(self):
+        super().run()
         self.service = cast(WhiteList, self.service)
         service = self.service
         global whitelist
@@ -30,7 +30,7 @@ class BlockGroup(EventHandler):
             evt.cancel()
 
 
-class Ping(EventHandler, IMessageFliter):
+class Ping(EventHandler, IMessageFilter):
     interested = [GroupMessage]
     entrys = [r"^(?P<ping>/ping)$", r"^(?P<delete>/delete)$", r"^(?P<leave>/leave)$"]
 
@@ -42,7 +42,7 @@ class Ping(EventHandler, IMessageFliter):
         if sender not in Administrators:
             return
 
-        if (r := self.fliter(evt)) is not None:
+        if (r := self.filter(evt)) is not None:
             bot = self.bot
             service = cast(WhiteList, self.service)
             id = evt.group_id
@@ -61,6 +61,7 @@ class WhiteList(Service):
 
     def __init__(self, bot):
         super().__init__(bot)
+        WhiteList.instance = self
         self.bot.db.execute(
             "create table if not exists whitelist (group_id integer unique)"
         )

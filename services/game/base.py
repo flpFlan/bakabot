@@ -8,16 +8,16 @@ from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
 # -- third party --
 # -- own --
-from services.base import EventHandler, Service, IMessageFliter
+from services.base import EventHandler, Service, IMessageFilter
 from services.core.base import core_service
-from cqhttp.events.base import Event
+from cqhttp.events.base import CQHTTPEvent
 
 # -- code --
 log = logging.getLogger("bot.service.game")
 all_games = {}
 
 
-class GameBehavior(IMessageFliter):
+class GameBehavior(IMessageFilter):
     interested = []
 
     def __init__(self, bot, game):
@@ -27,7 +27,7 @@ class GameBehavior(IMessageFliter):
         self.bot = cast(Bot, bot)
         self.game = game
 
-    async def handle(self, evt: Event):
+    async def handle(self, evt: CQHTTPEvent):
         ...
 
     async def _callback(self, arg):
@@ -50,7 +50,7 @@ class Game:
         self.timer: Optional[threading.Timer] = None
         self.check()
 
-    async def process_evt(self, evt: Event):
+    async def process_evt(self, evt: CQHTTPEvent):
         if self.game_over:
             return
         has_handler = False
@@ -93,8 +93,8 @@ class Game:
         del self
 
 
-class ManagerCore(EventHandler, IMessageFliter):
-    interested = [Event]
+class ManagerCore(EventHandler, IMessageFilter):
+    interested = [CQHTTPEvent]
     entrys = [r"^/game\s+(?P<game>.+)"]
     games: list[Game] = []
 
@@ -102,11 +102,11 @@ class ManagerCore(EventHandler, IMessageFliter):
         super().__init__(service)
         self.game_graph = all_games
 
-    async def handle(self, evt: Event):
+    async def handle(self, evt: CQHTTPEvent):
         from cqhttp.events.message import GroupMessage
 
         if isinstance(evt, GroupMessage):
-            if r := self.fliter(evt):
+            if r := self.filter(evt):
                 game = r["game"]
                 game = game.strip()
                 if g := self.game_graph.get(game, None):

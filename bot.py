@@ -74,7 +74,15 @@ class BotBehavior:
                     [True if isinstance(evt, i) else False for i in handler.interested]
                 ):
                     continue
-                await handler.handle(evt)
+                try:
+                    await handler.handle(evt)
+                except Exception as e:
+                    if group_id := getattr(evt, "group_id", None):
+                        from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+
+                        await SendGroupMsg(group_id, "牙白，发生了不知名的错误！").do(bot)
+                    log.error("error occurred when handling evt:%s", e)
+                    raise Exception(handler, evt, e)
             if evt._.canceled:
                 return
 
@@ -93,8 +101,8 @@ class BotBehavior:
         await self.process_evt(act)
         if act._.canceled:
             return
-        task = asyncio.create_task(self.bot.go.api(act))
-        task.add_done_callback(act._callback)
+        await self.bot.go.api(act)
+        act._callback()
 
 
 class Bot:
@@ -118,12 +126,14 @@ class Bot:
         await go.connect("ws://" + endpoint)
 
         # init database
-        if not os.path.exists("data/db"):
-            os.makedirs("data/db")
+        if not os.path.exists("src/db"):
+            os.makedirs("src/db")
         db = self.db
         name = self.name
-        await db.connect("data/db/%s.db" % name)
-        db.execute("create table if not exists services (service text,service_on bool)")
+        await db.connect("src/db/%s.db" % name)
+        db.execute(
+            "create table if not exists services (service text primary key,service_on bool)"
+        )
 
         # init services
         from services.base import Service
@@ -134,15 +144,21 @@ class Bot:
 
         sort_services(core_services)
         services = core_services + services
+        services.sort(key=lambda x: x.priority)
         self.services = [s(self) if not isinstance(s, Service) else s for s in services]
-        db.execute("select service,service_on from services")
-        db.commit()
-        service_status = db.fatchall()
-        service_status = {s[0]: s[1] for s in service_status}
+
         for s in self.services:
-            if not service_status.get(s.__class__.__name__, True):
-                continue
-            await s.start()
+            db.execute(
+                "select ifnull((select service_on from services where service = ?),true)",
+                (s.__class__.__name__,),
+            )
+            state = db.fatchone()
+            if state[0]:
+                await s.start()
+
+        # init src
+        if not os.path.exists("src/temp"):
+            os.makedirs("src/temp")
 
         self.is_running = True
         print("%s start up!" % name)

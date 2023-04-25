@@ -17,7 +17,7 @@ class RouletteBehavior(GameBehavior):
         game = cast(Roulette, self.game)
         blt_nst = game.blt_nst
         bot = self.bot
-        if self.fliter(evt) is not None:
+        if self.filter(evt) is not None:
             import random
 
             if sum(blt_nst) == 0:  # all nst has blt
@@ -41,7 +41,7 @@ class RouletteBehavior(GameBehavior):
         else:
             name = evt.sender.card or evt.sender.nickname
         await SendGroupMsg(group_id, f"玩家{name}被弹幕击中满身疮痍，游戏结束").do(bot)
-        if self.game.set_ban:
+        if game.set_ban:
             if evt.anonymous:
                 await SetGroupAnonymousBan(
                     group_id, anonymous=evt.anonymous, duration=game.set_ban
@@ -66,7 +66,7 @@ class RouletteInit(GameBehavior):
         if evt.message == "*s":
             game.init_state = False
             return
-        if r := self.fliter(evt):
+        if r := self.filter(evt):
             action = r.get("action", "")
             arg = r.get("arg", "")
             if not arg.isdecimal():

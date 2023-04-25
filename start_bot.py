@@ -15,7 +15,8 @@ logging.basicConfig(
 )
 
 
-async def start_bot(loop):
+async def start_bot():
+    loop = asyncio.get_event_loop()
     default = "localhost:2333"
     for bot in Bots:
         addr = Endpoints.get(bot.name, default)
@@ -25,5 +26,5 @@ async def start_bot(loop):
 
 if __name__ == "__main__":
     loop = asyncio.new_event_loop()
-    loop.run_until_complete(start_bot(loop))
+    loop.run_until_complete(start_bot())
     loop.run_forever()

@@ -3,5 +3,5 @@
 /test
 /__pycache__
 /start_bot.bat
-/data
+/src
 /log.txt

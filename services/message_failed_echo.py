@@ -18,11 +18,12 @@ class MessageFailedEchoCore(EventHandler):
             if not getattr(evt, "group_id", None):
                 return
 
-        def echo(future: asyncio.Future):
+        def echo():
             if evt.response.status == "failed":
                 assert evt.group_id
-                asyncio.run(SendGroupMsg(evt.group_id, "谔谔，该消息被腾讯拦截").do(self.bot))
-                asyncio.run(asyncio.sleep(1))
+                asyncio.ensure_future(
+                    SendGroupMsg(evt.group_id, "谔谔，该消息被腾讯拦截").do(self.bot)
+                )
 
         evt._callback = echo
 

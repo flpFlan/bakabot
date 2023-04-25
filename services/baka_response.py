@@ -3,14 +3,14 @@ from re import RegexFlag
 
 # -- third party --
 # -- own --
-from services.base import register_to, Service, IMessageFliter, EventHandler
+from services.base import register_to, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
 # -- code --
 
 
-class BakaResponseCore(EventHandler, IMessageFliter):
+class BakaResponseCore(EventHandler, IMessageFilter):
     interested = [GroupMessage]
     entrys = [
         r"^(你是|就是)?(?P<word>baka|バカ|大笨蛋|笨蛋)(!|！)*?$",
@@ -19,7 +19,7 @@ class BakaResponseCore(EventHandler, IMessageFliter):
     entry_flags = RegexFlag.I
 
     async def handle(self, evt: GroupMessage):
-        if (r := self.fliter(evt)) is not None:
+        if (r := self.filter(evt)) is not None:
             bot = self.bot
             group_id = evt.group_id
             if word := r.get("word", None):

@@ -29,7 +29,7 @@ def nested_dict():
 all_events = nested_dict()
 
 
-def register_to_events(evt: Type[CQHTTPEvent]):
+def register_to_events(evt):
     st = getattr(evt, "sub_type", None)
     if mt := getattr(evt, "message_type", None):
         if st:

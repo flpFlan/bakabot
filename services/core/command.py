@@ -7,7 +7,7 @@ import logging
 # -- own --
 from config import Administrators
 from services.base import Service
-from services.base import IMessageFliter, EventHandler
+from services.base import IMessageFilter, EventHandler
 from .base import core_service
 from cqhttp.events.message import Message, GroupMessage, PrivateMessage
 from cqhttp.api.message.SendMsg import SendMsg
@@ -17,7 +17,7 @@ from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 log = logging.getLogger("bot.service.command")
 
 
-class CommandCore(EventHandler, IMessageFliter):
+class CommandCore(EventHandler, IMessageFilter):
     interested = [Message]
     entrys = [r"^/cmd\s+(?P<cmd>[\s\S]+)"]
 
@@ -25,14 +25,16 @@ class CommandCore(EventHandler, IMessageFliter):
         qq = evt.user_id
         if not qq in Administrators:
             return
-        if r := self.fliter(evt):
+        if r := self.filter(evt):
             bot = self.bot
             commands = {}
 
             if isinstance(evt, GroupMessage):
 
                 def sgm(msg, group_id=evt.group_id):
-                    asyncio.run(SendGroupMsg(group_id=group_id, message=msg).do(bot))
+                    asyncio.ensure_future(
+                        SendGroupMsg(group_id=group_id, message=msg).do(bot)
+                    )
 
                 def segm(msg, interval):
                     from services.core.whitelist import whitelist
@@ -42,7 +44,9 @@ class CommandCore(EventHandler, IMessageFliter):
             if isinstance(evt, PrivateMessage):
 
                 def spm(msg, qq_number=evt.sender.user_id):
-                    asyncio.run(SendMsg(user_id=qq_number, message=msg).do(bot))
+                    asyncio.ensure_future(
+                        SendMsg(user_id=qq_number, message=msg).do(bot)
+                    )
 
             cmd = r["cmd"]
             cmd = commands.get(cmd, None) or cmd
@@ -57,7 +61,7 @@ class CommandCore(EventHandler, IMessageFliter):
         log.warning("Command must be on")
 
 
-class Catch(EventHandler, IMessageFliter):
+class Catch(EventHandler, IMessageFilter):
     interested = [GroupMessage]
     entrys = [r"^.catch$"]
     catch = False
@@ -69,7 +73,7 @@ class Catch(EventHandler, IMessageFliter):
             globals()["rgs"] = evt.message
             self.catch = False
             return
-        if self.fliter(evt) is not None:
+        if self.filter(evt) is not None:
             self.catch = True
 
 

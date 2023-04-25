@@ -4,8 +4,10 @@ from binascii import hexlify
 from Crypto.Cipher import AES
 
 # -- third party --
+import fake_useragent
+
 # -- own --
-from services.base import register_to, Service, IMessageFliter, EventHandler
+from services.base import register_to, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
@@ -58,14 +60,14 @@ class Encrypyed:
         return data
 
 
-class SearchSongCore(EventHandler, IMessageFliter):
+class SearchSongCore(EventHandler, IMessageFilter):
     interested = [GroupMessage]
     entrys = [r"^点歌(?P<song>.+)$"]
 
     def __init__(self, service):
         super().__init__(service)
         self.headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36",
+            "User-Agent": fake_useragent.UserAgent().random,
             "Host": "music.163.com",
             "Referer": "http://music.163.com/search/",
         }
@@ -75,7 +77,7 @@ class SearchSongCore(EventHandler, IMessageFliter):
         self.ep = Encrypyed()
 
     async def handle(self, evt: GroupMessage):
-        if r := self.fliter(evt):
+        if r := self.filter(evt):
             bot = self.bot
             song = r["song"]
             id = self.search_song(song)

@@ -5,7 +5,24 @@ from cqhttp.api.group_info.GetGroupMemberInfo import Response as Res
 
 
 class Response(ResponseBase):
-    data: list[Res]
+    class Info:
+        age: int
+        card: str
+        card_changeable: bool
+        group_id: int
+        join_time: int
+        last_sent_time: int
+        level: str
+        nickname: str
+        role: str
+        sex: str
+        shut_up_timestamp: int
+        title: str
+        title_expire_time: int
+        unfriendly: bool
+        user_id: int
+
+    data: list[Info]
 
 
 @register_to_api
