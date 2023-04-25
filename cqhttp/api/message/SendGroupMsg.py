@@ -3,8 +3,6 @@ import asyncio
 import threading
 import time
 from typing import Optional
-
-from click import echo
 from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 
 

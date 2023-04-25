@@ -24,6 +24,8 @@ class OnNewFriendGroupCore(EventHandler):
             if not evt.user_id == self.bot.qq_number:
                 return
             WhiteList.instance.delete(evt.group_id)
+            m = f"{self.bot.name}已退出群聊\ngroup:\n{evt.group_id}\noperator:\n{evt.operator_id}\ncomment\n{evt.comment}"
+            SendPrivateMsg.many(Administrators, m).do(self.bot)
             return
 
         if isinstance(evt, FriendRequest):

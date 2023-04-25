@@ -138,7 +138,7 @@ class Service:
 
 
 def register_to(*bots):
-    if "all" or "ALL" in bots:
+    if "all" in bots or "ALL" in bots:
         bots = [b.name for b in Bots]
 
     def register(cls):

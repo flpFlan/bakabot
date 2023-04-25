@@ -6,6 +6,7 @@ from typing import cast
 # -- own --
 from services.base import EventHandler, IMessageFilter, Service
 from services.core.base import core_service
+from cqhttp.events.notice import GroupPoked
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.api.group_operation.SetGroupLeave import SetGroupLeave
@@ -16,7 +17,7 @@ whitelist: set[int] = set()
 
 
 class BlockGroup(EventHandler):
-    interested = [GroupMessage]
+    interested = [GroupMessage, GroupPoked]
 
     def run(self):
         super().run()
@@ -25,7 +26,7 @@ class BlockGroup(EventHandler):
         global whitelist
         self.whitelist = whitelist = service.get()
 
-    async def handle(self, evt: GroupMessage):
+    async def handle(self, evt: GroupMessage | GroupPoked):
         if evt.group_id not in self.whitelist:
             evt.cancel()
 
