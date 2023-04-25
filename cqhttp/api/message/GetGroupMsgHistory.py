@@ -17,7 +17,7 @@ class GetGroupMsgHistory(ApiAction[Response]):
     """获取群消息历史记录"""
 
     action = "get_group_msg_history"
-    response = Response()
+    response: Response
 
     def __init__(
         self,
@@ -26,6 +26,8 @@ class GetGroupMsgHistory(ApiAction[Response]):
         *,
         echo: Optional[str] = None
     ):
+        super().__init__()
+        self.response = Response()
         self.message_seq = message_seq
         self.group_id = group_id
         self.echo = echo

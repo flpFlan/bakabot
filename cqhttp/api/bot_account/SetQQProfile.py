@@ -1,10 +1,10 @@
 """设置登录号资料"""
 from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api
+from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
 
 
 @register_to_api
-class SetQQProfile(ApiAction):
+class SetQQProfile(ApiAction[ResponseBase]):
     """设置登录号资料"""
 
     action = "set_qq_profile"
@@ -19,6 +19,8 @@ class SetQQProfile(ApiAction):
         *,
         echo: Optional[str] = None
     ):
+        super().__init__()
+        self.response = ResponseBase()
         self.nickname = nickname
         self.company = company
         self.email = email

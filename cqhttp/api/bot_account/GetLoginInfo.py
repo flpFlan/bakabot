@@ -15,7 +15,9 @@ class GetLoginInfo(ApiAction[Response]):
     """获取登录号信息"""
 
     action = "get_login_info"
-    response = Response()
+    response: Response
 
     def __init__(self, *, echo: str = ""):
+        super().__init__()
+        self.response = Response()
         self.echo = echo

@@ -1,4 +1,5 @@
 # -- stdlib --
+from asyncio import Future
 from typing import Type, Optional, cast, TypeVar, Generic
 
 # -- third party --
@@ -9,7 +10,9 @@ from cqhttp.base import Event, EventArgs
 
 
 class ApiActionArgs(EventArgs):
-    before_post: bool
+    def __init__(self):
+        super().__init__()
+        self.args = {}
 
 
 class ResponseBase:
@@ -28,7 +31,9 @@ class ApiAction(Event, Generic[TResponse]):
     action: str
     echo: Optional[str]
     response: Optional[TResponse]
-    _ = ApiActionArgs()
+
+    def __init__(self):
+        self._ = ApiActionArgs()
 
     def bind(self, bot):
         from bot import Bot
@@ -55,6 +60,9 @@ class ApiAction(Event, Generic[TResponse]):
         assert self.bot
         await self.bot.behavior.post_api(self)
         return self.response
+
+    def _callback(self):
+        ...
 
 
 all_apis = []

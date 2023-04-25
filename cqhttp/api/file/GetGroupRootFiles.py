@@ -40,8 +40,10 @@ class GetGroupRootFiles(ApiAction[Response]):
     """获取群根目录文件列表"""
 
     action = "get_group_root_files"
-    response = Response()
+    response: Response
 
     def __init__(self, group_id: int, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.group_id = group_id
         self.echo = echo

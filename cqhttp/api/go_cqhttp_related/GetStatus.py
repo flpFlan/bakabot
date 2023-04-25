@@ -31,7 +31,9 @@ class GetStatus(ApiAction[Response]):
     """获取状态"""
 
     action = "get_status"
-    response = Response()
+    response: Response
 
     def __init__(self, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.echo = echo

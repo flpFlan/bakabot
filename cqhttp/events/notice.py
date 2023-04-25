@@ -6,6 +6,9 @@ class Notice(CQHTTPEvent):
     post_type = "notice"
     notice_type: str
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class PrivateMessageRecalled(Notice):
@@ -15,6 +18,9 @@ class PrivateMessageRecalled(Notice):
 
     user_id: int
     message_id: int
+
+    def __init__(self):
+        super().__init__()
 
 
 @register_to_events
@@ -28,6 +34,9 @@ class GroupMessageRecalled(Notice):
     operator_id: int
     message_id: int
 
+    def __init__(self):
+        super().__init__()
+
 
 class GroupMemberIncreased(Notice):
     """群成员增加"""
@@ -39,6 +48,9 @@ class GroupMemberIncreased(Notice):
     operator_id: int
     user_id: int
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class GroupMemberApproveIncreased(GroupMemberIncreased):
@@ -46,12 +58,18 @@ class GroupMemberApproveIncreased(GroupMemberIncreased):
 
     sub_type = "approve"
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class GroupMemberInviteIncreased(GroupMemberIncreased):
     """管理员邀请入群"""
 
     sub_type = "invite"
+
+    def __init__(self):
+        super().__init__()
 
 
 class GroupMemberDecreased(Notice):
@@ -64,12 +82,18 @@ class GroupMemberDecreased(Notice):
     operator_id: int
     user_id: int
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class GroupMemberLeaveDecreased(GroupMemberDecreased):
     """主动退群"""
 
     sub_type = "leave"
+
+    def __init__(self):
+        super().__init__()
 
 
 @register_to_events
@@ -78,12 +102,18 @@ class GroupMemberKickDecreased(GroupMemberDecreased):
 
     sub_type = "kick"
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class GroupMemberKickMeDecreased(GroupMemberDecreased):
     """登录号被踢"""
 
     sub_type = "kick_me"
+
+    def __init__(self):
+        super().__init__()
 
 
 class GroupAdministratorChanged(Notice):
@@ -95,6 +125,9 @@ class GroupAdministratorChanged(Notice):
     group_id: int
     user_id: int
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class GroupAdministratorSet(GroupAdministratorChanged):
@@ -102,12 +135,18 @@ class GroupAdministratorSet(GroupAdministratorChanged):
 
     sub_type = "set"
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class GroupAdministratorUnset(GroupAdministratorChanged):
     """取消管理员"""
 
     sub_type = "unset"
+
+    def __init__(self):
+        super().__init__()
 
 
 @register_to_events
@@ -126,6 +165,9 @@ class GroupFileUploaded(Notice):
     user_id: int
     file: File
 
+    def __init__(self):
+        super().__init__()
+
 
 class GroupMemberBanOrLift(Notice):
     """群禁言"""
@@ -138,6 +180,9 @@ class GroupMemberBanOrLift(Notice):
     user_id: int
     duration: int
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class GroupMemberBanned(GroupMemberBanOrLift):
@@ -145,12 +190,18 @@ class GroupMemberBanned(GroupMemberBanOrLift):
 
     sub_type = "ban"
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class GroupMemberLiftBan(GroupMemberBanOrLift):
     """解除禁言"""
 
     sub_type = "lift_ban"
+
+    def __init__(self):
+        super().__init__()
 
 
 @register_to_events
@@ -160,6 +211,9 @@ class FriendAdded(Notice):
     notice_type = "friend_add"
 
     user_id: int
+
+    def __init__(self):
+        super().__init__()
 
 
 @register_to_events
@@ -173,6 +227,9 @@ class PrivatePoked(Notice):
     user_id: int
     target_id: int
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class GroupPoked(Notice):
@@ -184,6 +241,9 @@ class GroupPoked(Notice):
     group_id: int
     user_id: int
     target_id: int
+
+    def __init__(self):
+        super().__init__()
 
 
 @register_to_events
@@ -197,6 +257,9 @@ class GroupRedBagKingNotice(Notice):
     user_id: int
     target_id: int
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class GroupMemberHonorChanged(Notice):
@@ -208,6 +271,9 @@ class GroupMemberHonorChanged(Notice):
     group_id: int
     user_id: int
     honor_type: str
+
+    def __init__(self):
+        super().__init__()
 
 
 @register_to_events
@@ -221,6 +287,9 @@ class GroupMemberTitleChanged(Notice):
     user_id: int
     title: str
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class GroupMemberCardRefreshed(Notice):
@@ -232,6 +301,9 @@ class GroupMemberCardRefreshed(Notice):
     user_id: int
     card_new: str
     card_old: str
+
+    def __init__(self):
+        super().__init__()
 
 
 @register_to_events
@@ -248,6 +320,9 @@ class OfflineFileReceived(Notice):
     user_id: int
     file: File
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class ClientOnlineStateChanged(Notice):
@@ -263,6 +338,9 @@ class ClientOnlineStateChanged(Notice):
     client: Device
     online: bool
 
+    def __init__(self):
+        super().__init__()
+
 
 class EssentialMessageChanged(Notice):
     """精华消息变更"""
@@ -275,11 +353,17 @@ class EssentialMessageChanged(Notice):
     operator_id: int
     message_id: int
 
+    def __init__(self):
+        super().__init__()
+
 
 @register_to_events
 class EssentialMessageAdded(EssentialMessageChanged):
     "精华消息添加"
     sub_type = "add"
+
+    def __init__(self):
+        super().__init__()
 
 
 @register_to_events
@@ -287,3 +371,6 @@ class EssentialMessageDeleted(EssentialMessageChanged):
     """精华消息移出"""
 
     sub_type = "delete"
+
+    def __init__(self):
+        super().__init__()

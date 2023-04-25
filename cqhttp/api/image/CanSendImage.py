@@ -15,7 +15,9 @@ class CanSendImage(ApiAction[Response]):
     """检查是否可以发送图片"""
 
     action = "can_send_image"
-    response = Response()
+    response: Response
 
     def __init__(self, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.echo = echo

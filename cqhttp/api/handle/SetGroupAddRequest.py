@@ -17,7 +17,7 @@ class SetGroupAddRequest(ApiAction[Response]):
     """处理加群请求／邀请"""
 
     action = "set_group_add_request"
-    response = Response()
+    response: Response
 
     def __init__(
         self,
@@ -28,6 +28,8 @@ class SetGroupAddRequest(ApiAction[Response]):
         *,
         echo: Optional[str] = None
     ):
+        super().__init__()
+        self.response = Response()
         self.flag = flag
         self.sub_type = sub_type
         self.approve = approve

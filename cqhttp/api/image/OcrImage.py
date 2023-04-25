@@ -21,8 +21,10 @@ class OcrImage(ApiAction[Response]):
     """图片 OCR"""
 
     action = "ocr_image"
-    response = Response()
+    response: Response
 
     def __init__(self, image: str, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.image = image
         self.echo = echo

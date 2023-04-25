@@ -21,10 +21,12 @@ class GetStrangerInfo(ApiAction[Response]):
     """获取陌生人信息"""
 
     action = "get_stranger_info"
-    response = Response()
+    response: Response
 
     def __init__(
         self, user_id: int, no_cache: bool = False, *, echo: Optional[str] = None
     ):
+        super().__init__()
+        self.response = Response()
         self.user_id = user_id
         self.echo = echo

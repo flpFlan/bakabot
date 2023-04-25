@@ -33,9 +33,11 @@ class GetGroupHonorInfo(ApiAction[Response]):
     """获取群荣誉信息"""
 
     action = "get_group_honor_info"
-    response = Response()
+    response: Response
 
     def __init__(self, group_id: int, type: str = "all", *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.group_id = group_id
         self.type = type
         self.echo = echo

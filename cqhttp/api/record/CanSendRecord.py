@@ -15,7 +15,9 @@ class CanSendRecord(ApiAction[Response]):
     """检查是否可以发送语音"""
 
     action = "can_send_record"
-    response = Response()
+    response: Response
 
     def __init__(self, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.echo = echo

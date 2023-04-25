@@ -35,7 +35,9 @@ class GetGroupSystemMsg(ApiAction[Response]):
     """获取群系统消息"""
 
     action = "get_group_system_msg"
-    response = Response()
+    response: Response
 
     def __init__(self, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.echo = echo

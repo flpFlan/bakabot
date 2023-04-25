@@ -15,7 +15,7 @@ class SendPrivateMsg(ApiAction[Response]):
     """发送私聊消息"""
 
     action = "send_private_msg"
-    response = Response()
+    response: Response
 
     def __init__(
         self,
@@ -26,6 +26,8 @@ class SendPrivateMsg(ApiAction[Response]):
         *,
         echo: Optional[str] = None
     ):
+        super().__init__()
+        self.response = Response()
         self.user_id = user_id
         self.group_id = group_id
         self.message = message

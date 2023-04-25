@@ -1,8 +1,7 @@
 # -- stdlib --
 import asyncio
 import logging, os
-from typing import TypeVar, cast
-from collections import defaultdict
+from typing import cast
 
 # -- third party --
 
@@ -26,9 +25,9 @@ def sort_services(services):
             "after": set(seivice.execute_after),
         }
         for dep in seivice.execute_before:
-            graph[dep.__name__]["after"].add(seivice)
-        for dep_by in seivice.stand_after:
-            graph[dep_by.__name__]["before"].add(seivice)
+            graph[dep]["after"].add(seivice)
+        for dep_by in seivice.execute_after:
+            graph[dep_by]["before"].add(seivice)
 
     queue = [service for service, dep in graph.items() if not dep["before"]]
     result = []
@@ -64,72 +63,46 @@ class BotBehavior:
         for service in bot.services:
             if not service.service_on:
                 continue
-            if evt._.canceled:
-                return
             from services.base import EventHandler
 
             for handler in service.cores:
+                if not handler.core_on:
+                    continue
                 if not isinstance(handler, EventHandler):
                     continue
                 if not any(
                     [True if isinstance(evt, i) else False for i in handler.interested]
                 ):
                     continue
-                await handler.handle(evt)
+                try:
+                    await handler.handle(evt)
+                except Exception as e:
+                    if group_id := getattr(evt, "group_id", None):
+                        from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
-    async def loop(self):
-        while True:
+                        await SendGroupMsg(group_id, "牙白，发生了不知名的错误！").do(bot)
+                    log.error("error occurred when handling evt:%s", e)
+                    raise Exception(handler, evt, e)
+            if evt._.canceled:
+                return
+
+    async def loop(self, loop):
+        if self.bot.is_running:
             evt = await self.rev()
-            await self.process_evt(evt)
-
-    async def run(self, endpoint: str):
-        bot = self.bot
-        if bot.is_running:
-            log.warning("already running")
-            return
-
-        await bot.go.connect("ws://" + endpoint)
-        if not os.path.exists("data/db"):
-            os.makedirs("data/db")
-        await bot.db.connect("data/db/%s.db" % bot.name)
-
-        from services.base import Service
-
-        services = bot.services
-        sort_services(services)
-        bot.services = [s(bot) if not isinstance(s, Service) else s for s in services]
-        for s in bot.services:
-            await s.start()
-
-        bot.is_running = True
-        print("%s started！" % bot.name)
-        await self.loop()
-
-        log.warning("%s shootdown :(" % bot.name)
-        await self.stop()
-
-    async def stop(self):
-        bot = self.bot
-        if not bot.is_running:
-            log.warning("already closed")
-            return
-
-        await bot.go.disconnect()
-        await bot.db.close()
-        bot.is_running = False
-        print("%s closed!" % bot.name)
+            loop.create_task(self.process_evt(evt))
+        # loop.call_soon_threadsafe(asyncio.create_task, self.loop(loop))
+        loop.call_soon(asyncio.create_task, self.loop(loop))
 
     async def rev(self) -> CQHTTPEvent:
         bot = self.bot
         return await bot.go.rev_evt()
 
     async def post_api(self, act: ApiAction):
-        bot = self.bot
-        act._.before_post = True
         await self.process_evt(act)
-        await bot.go.api(act)
-        act._.before_post = False
-        await self.process_evt(act)
+        if act._.canceled:
+            return
+        await self.bot.go.api(act)
+        act._callback()
 
 
 class Bot:
@@ -142,3 +115,60 @@ class Bot:
         self.behavior = BotBehavior(self)
         self.go = CQHTTPAdapter(self)
         self.db = DataBase(self)
+
+    async def start_up(self, endpoint):
+        if self.is_running:
+            log.warning("already start up!")
+            return
+
+        # init backend
+        go = self.go
+        await go.connect("ws://" + endpoint)
+
+        # init database
+        if not os.path.exists("src/db"):
+            os.makedirs("src/db")
+        db = self.db
+        name = self.name
+        await db.connect("src/db/%s.db" % name)
+        db.execute(
+            "create table if not exists services (service text primary key,service_on bool)"
+        )
+
+        # init services
+        from services.base import Service
+
+        services = self.services
+        sort_services(services)
+        from services.core.base import core_services
+
+        sort_services(core_services)
+        services = core_services + services
+        services.sort(key=lambda x: x.priority)
+        self.services = [s(self) if not isinstance(s, Service) else s for s in services]
+
+        for s in self.services:
+            db.execute(
+                "select ifnull((select service_on from services where service = ?),true)",
+                (s.__class__.__name__,),
+            )
+            state = db.fatchone()
+            if state[0]:
+                await s.start()
+
+        # init src
+        if not os.path.exists("src/temp"):
+            os.makedirs("src/temp")
+
+        self.is_running = True
+        print("%s start up!" % name)
+
+    async def stop(self):
+        if not self.is_running:
+            log.warning("already closed")
+            return
+
+        await self.go.disconnect()
+        await self.db.close()
+        self.is_running = False
+        print("%s closed!" % self.name)

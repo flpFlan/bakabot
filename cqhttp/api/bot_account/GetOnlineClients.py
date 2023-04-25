@@ -17,8 +17,10 @@ class GetOnlineClients(ApiAction[Response]):
     """获取当前账号在线客户端列表"""
 
     action = "get_online_clients"
-    response = Response()
+    response: Response
 
     def __init__(self, no_cache: bool, *, echo: Optional[str] = None):
+        super().__init__()
+        self.response = Response()
         self.no_cache = no_cache
         self.echo = echo
