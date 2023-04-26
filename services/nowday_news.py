@@ -18,16 +18,14 @@ class NowdayNewsCore(EventHandler):
     async def handle(self, evt: GroupMessage):
         if not evt.message == "读懂世界":
             return
-        self.get_everyday_news()
+        await self.get_everyday_news()
         path = os.path.abspath(r".\src\temp\nowday_news_temp.png")
         await SendGroupMsg(evt.group_id, f"[CQ:image,file=file:///{path}]").do(self.bot)
 
-    def get_everyday_news(self):
+    async def get_everyday_news(self):
         url = "http://bjb.yunwj.top/php/tp/1.jpg"
-        response = Request.get(url, timeout=10)
-        response.raise_for_status()
         with open(r".\src\temp\nowday_news_temp.png", "wb") as file:
-            for i in response.iter_content(100000):
+            for i in Request.Sync.get_iter_content(url):
                 file.write(i)
             file.close()
 

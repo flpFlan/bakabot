@@ -3,6 +3,8 @@ import os
 import requests
 
 # -- third party --
+import aiohttp
+
 # -- own --
 from services.base import IMessageFilter, register_to, Service, EventHandler
 from cqhttp.events.message import GroupMessage
@@ -25,12 +27,12 @@ class PidCore(EventHandler, IMessageFilter):
             from config import Administrators
 
             if evt.user_id in Administrators:
-                if path := self.get_art(pid):
+                if path := await self.get_art(pid):
                     m = f"[CQ:image,file=file:///{path}]"
                 else:
                     m = "這個作品可能已被刪除，或無法取得。\n該当作品は削除されたか、存在しない作品IDです。"
             else:
-                m = self.get_art_webVer(pid)
+                m = await self.get_art_webVer(pid)
                 m = m or "這個作品可能已被刪除，或無法取得。\n該当作品は削除されたか、存在しない作品IDです。"
 
         except requests.ConnectTimeout:
@@ -38,10 +40,9 @@ class PidCore(EventHandler, IMessageFilter):
 
         await SendGroupMsg(evt.group_id, m).do(self.bot)
 
-    def get_art(self, pid):
+    async def get_art(self, pid):
         url = f"https://pixiv.cat/{pid}.jpg"
-        r = Request.get(url, timeout=6)
-        r.raise_for_status()
+        r = Request.Sync.get(url)
         format = r.headers["Content-Type"].split("/")[1]
         if format == "html; charset=utf-8":
             return 0
@@ -52,10 +53,9 @@ class PidCore(EventHandler, IMessageFilter):
             file.close()
         return os.path.abspath(path)
 
-    def get_art_webVer(self, pid):
+    async def get_art_webVer(self, pid):
         url = f"https://pixiv.cat/{pid}.jpg"
-        r = Request.get(url, timeout=6)
-        r.raise_for_status()
+        r = Request.Sync.get(url)
         format = r.headers["Content-Type"].split("/")[1]
         if format == "html; charset=utf-8":
             return 0

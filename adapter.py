@@ -16,7 +16,6 @@ from cqhttp.api.base import ApiAction
 
 # -- code --
 log = logging.getLogger("bot")
-# lock = asyncio.Lock()
 
 
 async def _callback(x):
@@ -67,7 +66,7 @@ class CQHTTPAdapter:
 
     async def api(self, act: ApiAction) -> bool:
         params = self.trans_action_to_json(act)
-        result = await self._api(**params)
+        result = await asyncio.to_thread(asyncio.run, self._api(**params))
         if res := act.response:
             set_attr(res, result)
         if result.get("status", "failed") == "failed":
@@ -84,20 +83,24 @@ class CQHTTPAdapter:
             form["echo"] = echo
 
         data = json.dumps(form)
-        # async with lock:
-        try:
-            await self.api_connection.send(data)
-            result = await self.api_connection.recv()
-        except ConnectionClosedError:
-            log.warning("go-cqhttp connection shootdown,attempting to reconnect...")
-            host = self.api_connection.host
-            port = self.api_connection.port
-            assert host and port
-            await self.connect(host + ":" + str(port))
-            await self.api_connection.send(data)
-            result = await self.api_connection.recv()
+        loop = asyncio.get_event_loop()
+        if not (lock := getattr(loop, "api_lock", None)):
+            lock = asyncio.Lock()
+            setattr(loop, "api_lock", lock)
+        async with lock:
+            try:
+                await self.api_connection.send(data)
+                result = await self.api_connection.recv()
+            except ConnectionClosedError:
+                log.warning("go-cqhttp connection shootdown,attempting to reconnect...")
+                host = self.api_connection.host
+                port = self.api_connection.port
+                assert host and port
+                await self.connect(host + ":" + str(port))
+                await self.api_connection.send(data)
+                result = await self.api_connection.recv()
 
-        return json.loads(result)
+            return json.loads(result)
 
     @staticmethod
     def trans_json_to_evt(rev: dict) -> CQHTTPEvent:
@@ -108,7 +111,6 @@ class CQHTTPAdapter:
 
         evt = all_events[pt][tt][st]()
         assert evt
-
         set_attr(evt, rev)
         return evt
 

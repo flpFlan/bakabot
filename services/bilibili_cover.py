@@ -41,30 +41,26 @@ class BilibiliCoverCore(EventHandler, IMessageFilter):
     entry_flags = re.I
 
     async def handle(self, evt: GroupMessage):
-        if r := self.filter(evt):
-            bot = self.bot
-            group_id = evt.group_id
-            type = (r.get("type", "") or "live").lower()
-            arg = r.get("arg", "")
-            if type == "bv":
-                arg = bv_to_av("BV" + arg)
-                type = "av"
-            if url := self.get_b_cover(arg, type):
-                await SendGroupMsg(group_id, f"[CQ:image,file={url}]").do(bot)
-                return
-            await SendGroupMsg(group_id, "呜，房间为空" if type == "live" else "呜，稿件为空").do(
-                bot
-            )
+        if not (r := self.filter(evt)):
+            return
+        bot = self.bot
+        group_id = evt.group_id
+        type = (r.get("type", "") or "live").lower()
+        arg = r.get("arg", "")
+        if type == "bv":
+            arg = bv_to_av("BV" + arg)
+            type = "av"
+        if url := await self.get_b_cover(arg, type):
+            await SendGroupMsg(group_id, f"[CQ:image,file={url}]").do(bot)
+            return
+        m = "呜，房间为空" if type == "live" else "呜，稿件为空"
+        await SendGroupMsg(group_id, m).do(bot)
 
-    def get_b_cover(self, id, type="av"):
-        r = Request.get(
-            f"https://apiv2.magecorn.com/bilicover/get?type={type}&id={id}&client=2.5.2"
-        ).json()
-        if "url" in r:
-            result = r["url"]
-            return result
-        else:
-            return None
+    async def get_b_cover(self, id, type="av"):
+        url = f"https://apiv2.magecorn.com/bilicover/get?"
+        "type={type}&id={id}&client=2.5.2"
+        r = Request.Sync.get_json(url)
+        return r.get("url", None)
 
 
 @register_to("ALL")
