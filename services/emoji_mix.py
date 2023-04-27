@@ -3,6 +3,7 @@ import re
 
 # -- third party --
 import emoji
+import aiohttp
 
 # -- own --
 from services.base import IMessageFilter, register_to, Service, EventHandler
@@ -32,20 +33,20 @@ class EmojiMixCore(EventHandler, IMessageFilter):
         self.format_emoji(emoji1)
         self.format_emoji(emoji2)
         try:
-            url = self.get_mix_url(emoji1, emoji2)
+            url = await self.get_mix_url(emoji1, emoji2)
             m = f"[CQ:image,file={url}]"
         except EmojiError:
             m = '啊哦，似乎发生了一些错误Σ(⊙▽⊙"a\n请检查内容后重试'
 
         await SendGroupMsg(evt.group_id, m).do(self.bot)
 
-    def get_mix_url(self, emoji1, emoji2):
+    async def get_mix_url(self, emoji1, emoji2):
         emoji1 = hex(ord(emoji1)).replace("0x", "u")
         emoji2 = hex(ord(emoji2)).replace("0x", "u")
 
         for _ in range(2):
             url = f"https://www.gstatic.com/android/keyboard/emojikitchen/20201001/{emoji1}/{emoji1}_{emoji2}.png"
-            if Request.get(url).ok:
+            if Request.Sync.get(url).ok:
                 return url
             emoji1, emoji2 = emoji2, emoji1
 

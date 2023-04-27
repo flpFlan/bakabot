@@ -66,21 +66,21 @@ class SearchSongCore(EventHandler, IMessageFilter):
 
     def __init__(self, service):
         super().__init__(service)
-        self.headers = {
+        headers = {
             "User-Agent": fake_useragent.UserAgent().random,
             "Host": "music.163.com",
             "Referer": "http://music.163.com/search/",
         }
         self.main_url = "http://music.163.com/"
         self.session = requests.Session()
-        self.session.headers = self.headers  # type: ignore
+        self.session.headers = headers
         self.ep = Encrypyed()
 
     async def handle(self, evt: GroupMessage):
         if r := self.filter(evt):
             bot = self.bot
             song = r["song"]
-            id = self.search_song(song)
+            id = await self.search_song(song)
             if id is None:
                 await SendGroupMsg(evt.group_id, "啊哦Σ(⊙▽⊙，没有找到相关歌曲").do(bot)
                 return
@@ -89,7 +89,7 @@ class SearchSongCore(EventHandler, IMessageFilter):
                 return
             await SendGroupMsg(evt.group_id, f"[CQ:music,type=163,id={id}]").do(bot)
 
-    def search_song(self, search_content, search_type=1, limit=1):
+    async def search_song(self, search_content, search_type=1, limit=1):
         """
             根据音乐名搜索
         :params search_content: 音乐名
@@ -106,8 +106,7 @@ class SearchSongCore(EventHandler, IMessageFilter):
             "limit": limit,
         }
         data = self.ep.search(text)
-        resp = self.session.post(url, data=data)
-        result = resp.json()
+        result = self.session.post(url, data=data).json()
         if "result" not in result:
             return "error"
         elif "songCount" not in result["result"]:

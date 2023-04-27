@@ -2,10 +2,11 @@
 import json, logging, asyncio
 from typing import cast
 from urllib.parse import urljoin
+from collections import defaultdict
 
 # -- third party --
 from websockets.client import connect
-from websockets.exceptions import ConnectionClosedError
+from websockets.exceptions import ConnectionClosed
 from tenacity import retry, wait_fixed, stop_after_attempt
 
 # -- own --
@@ -16,7 +17,6 @@ from cqhttp.api.base import ApiAction
 
 # -- code --
 log = logging.getLogger("bot")
-# lock = asyncio.Lock()
 
 
 async def _callback(x):
@@ -39,19 +39,18 @@ class CQHTTPAdapter:
     )
     async def connect(self, uri: str):
         self.evt_connection = await connect(urljoin(uri, "/event"), ping_interval=None)
-        self.api_connection = await connect(urljoin(uri, "/api"), ping_interval=None)
+        self.api_uri = urljoin(uri, "/api")
 
     async def disconnect(self):
         await self.evt_connection.close()
-        await self.api_connection.close()
 
     async def rev_raw(self) -> str:
         try:
             raw = await self.evt_connection.recv()
-        except ConnectionClosedError:
+        except ConnectionClosed:
             log.warning("go-cqhttp connection shootdown,attempting to reconnect...")
-            host = self.api_connection.host
-            port = self.api_connection.port
+            host = self.evt_connection.host
+            port = self.evt_connection.port
             assert host and port
             await self.connect(host + ":" + str(port))
             raw = await self.evt_connection.recv()
@@ -75,7 +74,7 @@ class CQHTTPAdapter:
             return False
         return True
 
-    async def _api(self, action: str, echo="", **params) -> dict:
+    async def _api(self, action: str, echo="", **params) -> dict:  # type: ignore
         form = {}
         form["action"] = action
         if params:
@@ -84,20 +83,22 @@ class CQHTTPAdapter:
             form["echo"] = echo
 
         data = json.dumps(form)
-        # async with lock:
-        try:
-            await self.api_connection.send(data)
-            result = await self.api_connection.recv()
-        except ConnectionClosedError:
-            log.warning("go-cqhttp connection shootdown,attempting to reconnect...")
-            host = self.api_connection.host
-            port = self.api_connection.port
-            assert host and port
-            await self.connect(host + ":" + str(port))
-            await self.api_connection.send(data)
-            result = await self.api_connection.recv()
-
-        return json.loads(result)
+        loop = asyncio.get_event_loop()
+        if not (lock := getattr(loop, "api_lock", None)):
+            lock = asyncio.Lock()
+            setattr(loop, "api_lock", lock)
+        c = 0
+        async for api_connection in connect(self.api_uri):
+            try:
+                await api_connection.send(data)
+                result = await api_connection.recv()
+            except ConnectionClosed:
+                if not (c := c + 1) > MAX_CONNECT_RETRIES:
+                    log.warning("api connection shootdown,attempting to retry...")
+                    continue
+                log.error("max retry reached, %sshootdown", self.bot.name)
+                raise Exception("Max Retry Reached")
+            return json.loads(result)
 
     @staticmethod
     def trans_json_to_evt(rev: dict) -> CQHTTPEvent:
@@ -108,7 +109,6 @@ class CQHTTPAdapter:
 
         evt = all_events[pt][tt][st]()
         assert evt
-
         set_attr(evt, rev)
         return evt
 

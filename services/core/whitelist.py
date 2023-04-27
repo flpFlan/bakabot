@@ -33,7 +33,11 @@ class BlockGroup(EventHandler):
 
 class Ping(EventHandler, IMessageFilter):
     interested = [GroupMessage]
-    entrys = [r"^(?P<ping>/ping)$", r"^(?P<delete>/delete)$", r"^(?P<leave>/leave)$"]
+    entrys = [
+        r"^(?P<ping>/ping)\s+(?P<bot>.+)",
+        r"^(?P<delete>/delete)\s+(?P<bot>.+)",
+        r"^(?P<leave>/leave)$",
+    ]
 
     async def handle(self, evt: GroupMessage):
         sender = evt.user_id
@@ -48,9 +52,15 @@ class Ping(EventHandler, IMessageFilter):
             service = cast(WhiteList, self.service)
             id = evt.group_id
             if r.get("ping", None):
+                name = r.get("bot", "")
+                if not name == bot.name:
+                    return
                 service.add(id)
                 await SendGroupMsg(id, "%s已在本群启用！" % bot.name).do(bot)
             if r.get("delete", None):
+                name = r.get("bot", "")
+                if not name == bot.name:
+                    return
                 service.delete(id)
             if r.get("leave", None):
                 await SetGroupLeave(evt.group_id).do(bot)

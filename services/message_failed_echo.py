@@ -1,5 +1,6 @@
 # -- stdlib --
 import asyncio
+import time
 
 # -- third party --
 # -- own --
@@ -19,11 +20,21 @@ class MessageFailedEchoCore(EventHandler):
                 return
 
         def echo():
-            if evt.response.status == "failed":
-                assert evt.group_id
-                asyncio.ensure_future(
-                    SendGroupMsg(evt.group_id, "谔谔，该消息被腾讯拦截").do(self.bot)
+            if not (r := evt.response):
+                return
+            if not (e := getattr(r, "echo", None)):
+                return
+            if e == "msg_failed_echo":
+                return
+            time.sleep(1)
+            if not r.status == "failed":
+                return
+            assert evt.group_id
+            asyncio.create_task(
+                SendGroupMsg(evt.group_id, "谔谔，该消息被腾讯拦截", echo="msg_failed_echo").do(
+                    self.bot
                 )
+            )
 
         evt._callback = echo
 

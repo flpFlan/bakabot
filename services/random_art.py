@@ -33,26 +33,23 @@ class RandomArtCore(EventHandler, IMessageFilter):
         if r := self.filter(evt):
             try:
                 if tag := r.get("tag", ""):
-                    if url := self.search_random(tag):
+                    if url := await self.search_random(tag):
                         m = f"[CQ:image,file={url}]"
                     else:
                         m = "没有找到相关图片Σ( ° △ °|||)"
                 else:
-                    url = self.get_random()
+                    url = await self.get_random()
                     m = f"[CQ:image,file={url}]"
             except requests.ConnectTimeout:
                 m = "请求超时(Ｔ▽Ｔ)"
             await SendGroupMsg(evt.group_id, m).do(self.bot)
 
-    def get_random(self):
+    async def get_random(self):
         type = random.getrandbits(1)
         if type == 0:
             key = ["img", "imgurl"]
-            global urllist
-
             url = random.choice(urllist_0)
-
-            resonse = Request.get(url, timeout=10).json()
+            resonse = Request.Sync.get_json(url)
             for i in key:
                 if i in resonse:
                     if resonse[i].startswith("//"):
@@ -62,20 +59,18 @@ class RandomArtCore(EventHandler, IMessageFilter):
             url = random.choice(urllist_1)
             return urlopen(url, timeout=5).geturl()
 
-    def search_random(self, tag):
+    async def search_random(self, tag):
         for c in reversed(range(6)):
             data = {"str": tag, "id": 24 * random.randint(0, c)}
-            res = Request.get(
-                f'https://www.duitang.com/napi/blogv2/list/by_search/?kw={data["str"]}&after_id={data["id"]}',
-                timeout=10,
-            ).text
-            if len(res) >= 50:
+            url = f'https://www.duitang.com/napi/blogv2/list/by_search/?kw={data["str"]}&after_id={data["id"]}'
+            r = Request.Sync.get_text(url, timeout=10)
+            if len(r) >= 50:
                 break
-        assert res  # type: ignore
-        if res.startswith("\ufeff"):
-            res = res.encode("utf-8")[3:].decode("utf-8")
-        res = json.loads(res)
-        if data := res.get("data", None):
+        assert r  # type: ignore
+        if r.startswith("\ufeff"):
+            r = r.encode("utf-8")[3:].decode("utf-8")
+        r = json.loads(r)
+        if data := r.get("data", None):
             if all_arts := data.get("object_list", None):
                 i = random.choice(all_arts)
                 return i["photo"]["path"].replace(".gif_jpeg", ".gif")

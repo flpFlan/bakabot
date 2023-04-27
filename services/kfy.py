@@ -32,11 +32,11 @@ class KFC(Service):
 
     async def start(self):
         await super().start()
-        self.texts = self.get_texts()
+        self.texts = await self.get_texts()
 
-    def get_texts(self):
-        r = Request.get(url).json()
+    async def get_texts(self):
+        r = Request.Sync.get_json(url)
         texts = [t["text"] for t in r]
-        r = Request.get(url2).json()
+        r = Request.Sync.get_json(url2)
         texts.extend(r["post"])
         return texts

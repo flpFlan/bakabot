@@ -1,6 +1,7 @@
 # -- stdlib --
 import asyncio
 import logging, os
+import datetime
 from typing import cast
 
 # -- third party --
@@ -82,6 +83,7 @@ class BotBehavior:
 
                         await SendGroupMsg(group_id, "牙白，发生了不知名的错误！").do(bot)
                     log.error("error occurred when handling evt:%s", e)
+                    print(datetime.datetime.now, e)
                     raise Exception(handler, evt, e)
             if evt._.canceled:
                 return

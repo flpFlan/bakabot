@@ -33,7 +33,8 @@ class BarberShop(Service):
 
     async def start(self):
         await super().start()
-        self.words = self.get_words()
+        self.words = await self.get_words()
 
-    def get_words(self) -> list[str]:
-        return Request.get(url).json()["post"]
+    async def get_words(self) -> list[str]:
+        r = Request.Sync.get_json(url)
+        return r["post"]

@@ -104,5 +104,5 @@ class NowdayFortune(Service):
 
     def clear(self):
         db = self.bot.db
-        db.execute("truncate nowday_fortune")
+        db.execute("delete from nowday_fortune")
         self.fortune_graph.clear()
