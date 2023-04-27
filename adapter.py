@@ -16,7 +16,7 @@ from cqhttp.events.base import all_events
 from cqhttp.api.base import ApiAction
 
 # -- code --
-log = logging.getLogger("bot")
+log = logging.getLogger("bot.go")
 
 
 async def _callback(x):
@@ -48,11 +48,10 @@ class CQHTTPAdapter:
         try:
             raw = await self.evt_connection.recv()
         except ConnectionClosed:
-            log.warning("go-cqhttp connection shootdown,attempting to reconnect...")
-            host = self.evt_connection.host
-            port = self.evt_connection.port
+            log.warning("event connection shootdown,attempting to reconnect...")
+            host, port = self.evt_connection.host, self.evt_connection.port
             assert host and port
-            await self.connect(host + ":" + str(port))
+            await self.connect(f"{host}:{port}")
             raw = await self.evt_connection.recv()
         return cast(str, raw)
 
@@ -87,17 +86,13 @@ class CQHTTPAdapter:
         if not (lock := getattr(loop, "api_lock", None)):
             lock = asyncio.Lock()
             setattr(loop, "api_lock", lock)
-        c = 0
-        async for api_connection in connect(self.api_uri):
+        async with connect(self.api_uri) as api_connection:
             try:
                 await api_connection.send(data)
                 result = await api_connection.recv()
             except ConnectionClosed:
-                if not (c := c + 1) > MAX_CONNECT_RETRIES:
-                    log.warning("api connection shootdown,attempting to retry...")
-                    continue
-                log.error("max retry reached, %sshootdown", self.bot.name)
-                raise Exception("Max Retry Reached")
+                log.warning("api connection shootdown")
+                raise Exception("api connection shootdown")
             return json.loads(result)
 
     @staticmethod
@@ -134,7 +129,10 @@ class CQHTTPAdapter:
 def set_attr(obj, attrs: dict):
     for name, value in attrs.items():
         if isinstance(value, dict):
-            sub_obj = obj.__annotations__.get(name)()
+            sub_obj = obj.__annotations__.get(name)
+            if args := getattr(sub_obj, "__args__", None):
+                sub_obj = args[0]
+            sub_obj = sub_obj()
             set_attr(sub_obj, value)
             setattr(obj, name, sub_obj)
         elif isinstance(value, list):

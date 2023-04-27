@@ -6,6 +6,7 @@ from re import RegexFlag
 from services.base import register_to, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+from utils.wrapper import timecooling
 
 # -- code --
 
@@ -20,12 +21,15 @@ class BakaResponseCore(EventHandler, IMessageFilter):
 
     async def handle(self, evt: GroupMessage):
         if (r := self.filter(evt)) is not None:
-            bot = self.bot
-            group_id = evt.group_id
-            if word := r.get("word", None):
-                await SendGroupMsg(group_id=group_id, message="不是%s!" % word).do(bot)
-            elif r.get("word2", None):
-                await SendGroupMsg(group_id=group_id, message="我不笨!").do(bot)
+            await self.response(r, evt.group_id)
+
+    @timecooling(3)
+    async def response(self, r, group_id):
+        bot = self.bot
+        if word := r.get("word", None):
+            await SendGroupMsg(group_id=group_id, message="不是%s!" % word).do(bot)
+        elif r.get("word2", None):
+            await SendGroupMsg(group_id=group_id, message="我不笨!").do(bot)
 
 
 @register_to("ALL")
