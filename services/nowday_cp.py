@@ -55,7 +55,7 @@ class NowdayCPCore(EventHandler):
                 group_id, cp_qq, qq_number, evt.sender.card or evt.sender.nickname
             )
         photo = f"http://q1.qlogo.cn/g?b=qq&nk={cp_qq}&s=640"
-        if word := CPWord.instance.words.get(qq_number, None):
+        if word := CPWord.instance.words.get(cp_qq, None):
             m = f"[CQ:at,qq={qq_number}]\n您的今日cp是:\n{cp_name}[CQ:image,file={photo}]\n>>>\n{word}"
         else:
             m = f"[CQ:at,qq={qq_number}]\n您的今日cp是:\n{cp_name}[CQ:image,file={photo}]"
@@ -126,7 +126,7 @@ class CPWord(EventHandler, IMessageFilter):
 
     def clear(self):
         db = self.bot.db
-        db.execute("truncate cp_words")
+        db.execute("delete from cp_words")
         self.words.clear()
 
 
@@ -180,5 +180,5 @@ class NowdayCP(Service):
 
     def clear(self):
         db = self.bot.db
-        db.execute("truncate nowday_cp")
+        db.execute("delete from nowday_cp")
         self.cp_graph.clear()

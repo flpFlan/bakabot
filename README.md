@@ -172,7 +172,7 @@ servers:
 - [x] [疯狂星期四文案生成](https://github.com/whitescent/KFC-Crazy-Thursday)
 - [x] 掷骰
 - [ ] 聊天
-- [ ] 复读
+- [x] 复读
 - [x] 俄罗斯轮盘
 - [ ] 五子棋
 - [ ] 扫雷
