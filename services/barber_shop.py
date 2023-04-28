@@ -15,7 +15,7 @@ url = "https://raw.githubusercontent.com/xipesoy/zhenxun_plugin_meiriyiju/main/r
 
 class BarberShopCore(EventHandler, IMessageFilter):
     interested = [GroupMessage]
-    entrys = [r"^发电(?P<name>[\S]{1,23})"]
+    entrys = [r"^发电\s*(?P<name>[\S]{1,23})"]
 
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):

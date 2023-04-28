@@ -14,11 +14,11 @@ from config import Administrators
 class TakeBackMsgCore(EventHandler, IMessageFilter):
     interested = [GroupMessage]
 
-    entrys = [r"^\[CQ:reply,id=(?P<id>\d+)\](?:\[CQ:at,qq=\d+\])?\s*撤回"]
+    entrys = [r"^\[CQ:reply,id=(?P<id>-?\d+)\](?:\[CQ:at,qq=\d+\])*\s*撤回$"]
 
     def run(self):
         super().run()
-        p = rf"^\[CQ:reply,id=(?P<id>\d+)\](?:\[CQ:at,qq={self.bot.qq_number}\])?\s*撤回"
+        p = rf"^\[CQ:reply,id=(?P<id>-?\d+)\](?:\[CQ:at,qq={self.bot.qq_number}\]\s*)*撤回$"
         self.entrys = [compile(p)]
 
     async def handle(self, evt: GroupMessage):
