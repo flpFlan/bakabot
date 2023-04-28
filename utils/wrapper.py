@@ -1,3 +1,5 @@
+import asyncio
+import threading
 import time, inspect
 from collections import defaultdict
 
@@ -24,5 +26,18 @@ def timecooling(seconds: float):
             return _cfunc
         else:
             return _func
+
+
+def scheduled(seconds: float, *args, **kwargs):
+    def wrapper(func):
+        if inspect.iscoroutinefunction(func):
+
+            def _run_cfunc(f, *args, **kwargs):
+                asyncio.run(f(*args, **kwargs))
+
+            threading.Timer(seconds, _run_cfunc, func, *args, **kwargs).start()
+        else:
+            threading.Timer(function=func, interval=seconds, *args, **kwargs).start()
+        return func
 
     return wrapper

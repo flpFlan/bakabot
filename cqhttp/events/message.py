@@ -1,3 +1,4 @@
+from typing import Optional
 from cqhttp.events.base import CQHTTPEvent
 from cqhttp.events.base import register_to_events
 
@@ -87,13 +88,13 @@ class GroupMessage(Message):
     class Sender:
         user_id: int
         nickname: str
-        sex: str
-        age: int
-        card: str
-        area: str
-        level: str
-        role: str
-        title: str
+        sex: Optional[str] = None
+        age: Optional[int] = None
+        card: Optional[str] = None
+        area: Optional[str] = None
+        level: Optional[str] = None
+        role: Optional[str] = None
+        title: Optional[str] = None
 
     class Anonymous:
         id: int
@@ -104,7 +105,7 @@ class GroupMessage(Message):
 
     sender: Sender
     group_id: int
-    anonymous: Anonymous | None
+    anonymous: Optional[Anonymous]
 
     def __init__(self):
         super().__init__()
