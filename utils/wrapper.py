@@ -27,6 +27,8 @@ def timecooling(seconds: float):
         else:
             return _func
 
+    return wrapper
+
 
 def scheduled(seconds: float, *args, **kwargs):
     def wrapper(func):
