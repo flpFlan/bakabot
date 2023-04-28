@@ -28,7 +28,10 @@ def reload(*args):
 
 class CommandCore(EventHandler, IMessageFilter):
     interested = [Message]
-    entrys = [r"^/cmd\s+(?P<cmd>[\s\S]+)"]
+    entrys = [
+        r"^/cmd\s+(?P<cmd>[\S]+)(?P<args>(?:\s+[\S]+)+)",
+        r"^/cmd\s+(?P<cmd>[\s\S]+)",
+    ]
 
     async def handle(self, evt: Message):
         qq = evt.user_id
@@ -36,7 +39,7 @@ class CommandCore(EventHandler, IMessageFilter):
             return
         if r := self.filter(evt):
             bot = self.bot
-            commands = {}
+            commands = {"reload": reload}
 
             if isinstance(evt, GroupMessage):
 
@@ -57,10 +60,12 @@ class CommandCore(EventHandler, IMessageFilter):
                         SendMsg(user_id=qq_number, message=msg).do(bot)
                     )
 
-            cmd = r["cmd"]
-            cmd = commands.get(cmd, None) or cmd
+            cmd_raw = r["cmd"]
             try:
-                exec(cmd)
+                if cmd := commands.get(cmd_raw, None):
+                    cmd(eval(arg.strip()) for arg in r["args"].split())
+                else:
+                    exec(cmd_raw)
             except Exception as e:
                 log.error("error while excute command:\n%s", e)
                 if isinstance(evt, GroupMessage):
