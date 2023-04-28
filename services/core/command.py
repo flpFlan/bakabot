@@ -2,6 +2,7 @@
 from ast import While
 import asyncio
 import logging
+import inspect, importlib
 
 # -- third party --
 # -- own --
@@ -15,6 +16,14 @@ from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
 # -- code --
 log = logging.getLogger("bot.service.command")
+
+
+def reload(*args):
+    for arg in args:
+        if inspect.ismodule(arg):
+            importlib.reload(arg)
+        else:
+            importlib.reload(importlib.import_module(arg.__module__))
 
 
 class CommandCore(EventHandler, IMessageFilter):

@@ -30,7 +30,7 @@ def timecooling(seconds: float):
     return wrapper
 
 
-def scheduled(seconds: float, *args, **kwargs):
+def interval_scheduled(seconds: float, *args, **kwargs):
     def wrapper(func):
         if inspect.iscoroutinefunction(func):
 
