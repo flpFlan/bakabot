@@ -1,8 +1,8 @@
 # -- stdlib --
-from ast import While
 import asyncio
 import logging
-import inspect, importlib
+import importlib
+from inspect import ismodule
 
 # -- third party --
 # -- own --
@@ -20,7 +20,7 @@ log = logging.getLogger("bot.service.command")
 
 def reload(*args):
     for arg in args:
-        if inspect.ismodule(arg):
+        if ismodule(arg):
             importlib.reload(arg)
         else:
             importlib.reload(importlib.import_module(arg.__module__))
@@ -63,7 +63,7 @@ class CommandCore(EventHandler, IMessageFilter):
             cmd_raw = r["cmd"]
             try:
                 if cmd := commands.get(cmd_raw, None):
-                    cmd(eval(arg.strip()) for arg in r["args"].split())
+                    cmd(*(eval(arg.strip()) for arg in r["args"].split()))
                 else:
                     exec(cmd_raw)
             except Exception as e:
