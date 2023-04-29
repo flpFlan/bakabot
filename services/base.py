@@ -67,19 +67,11 @@ class SheduledHandler(ServiceCore):
     def run(self):
         super().run()
         self.jobs = jobs = []
-        self.scheduler = scheduler = BackgroundScheduler()  # AsyncIOScheduler()
+        self.scheduler = scheduler = AsyncIOScheduler()  # BackgroundScheduler()
         if self.shedule_trigger == "interval":
-            jobs.append(
-                scheduler.add_job(
-                    lambda: asyncio.run(self.handle()), "interval", **self.args
-                )
-            )
+            jobs.append(scheduler.add_job(self.handle(), "interval", **self.args))
         if self.shedule_trigger == "cron":
-            jobs.append(
-                scheduler.add_job(
-                    lambda: asyncio.run(self.handle()), "cron", **self.args
-                )
-            )
+            jobs.append(scheduler.add_job(self.handle(), "cron", **self.args))
         scheduler.start()
 
     def close(self):

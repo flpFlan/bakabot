@@ -29,7 +29,7 @@ def reload(*args):
 class CommandCore(EventHandler, IMessageFilter):
     interested = [Message]
     entrys = [
-        r"^/cmd\s+(?P<cmd>[\S]+)(?P<args>(?:\s+[\S]+)+)",
+        # r"^/cmd\s+(?P<cmd>[\S]+)(?P<args>(?:\s+[\S]+)+)",
         r"^/cmd\s+(?P<cmd>[\s\S]+)",
     ]
 
@@ -62,10 +62,10 @@ class CommandCore(EventHandler, IMessageFilter):
 
             cmd_raw = r["cmd"]
             try:
-                if cmd := commands.get(cmd_raw, None):
-                    cmd(*(eval(arg.strip()) for arg in r["args"].split()))
-                else:
-                    exec(cmd_raw)
+                # if cmd := commands.get(cmd_raw, None):
+                #     cmd(*(eval(arg.strip()) for arg in r["args"].split()))
+                # else:
+                exec(cmd_raw)
             except Exception as e:
                 log.error("error while excute command:\n%s", e)
                 if isinstance(evt, GroupMessage):

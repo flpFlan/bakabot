@@ -54,7 +54,7 @@ class NowdayFortuneCore(EventHandler):
 
 class RefreshFortune(SheduledHandler):
     shedule_trigger = "cron"
-    args = {"hour": 0, "minute": 0, "second": 0}
+    args = {"hour": 0}
 
     async def handle(self):
         service = cast(NowdayFortune, self.service)
