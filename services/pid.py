@@ -1,5 +1,6 @@
 # -- stdlib --
 import os
+from urllib.parse import urljoin
 import requests
 
 # -- third party --
@@ -10,7 +11,7 @@ from services.base import IMessageFilter, register_to, Service, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
-from options import PID_PATH
+from options import PID_PATH, PID_URL
 
 # -- code --
 
@@ -33,7 +34,7 @@ class PidCore(EventHandler, IMessageFilter):
                     m = "這個作品可能已被刪除，或無法取得。\n該当作品は削除されたか、存在しない作品IDです。"
             else:
                 m = await self.get_art_webVer(pid)
-                m = m or "這個作品可能已被刪除，或無法取得。\n該当作品は削除されたか、存在しない作品IDです。"
+                m = "" or "這個作品可能已被刪除，或無法取得。\n該当作品は削除されたか、存在しない作品IDです。"
 
         except requests.ConnectTimeout:
             m = "请求失败，请稍后再试"
@@ -64,7 +65,7 @@ class PidCore(EventHandler, IMessageFilter):
             for i in r.iter_content():
                 file.write(i)
             file.close()
-        return path
+        return urljoin(PID_URL, f"{pid}.{format}")
 
 
 @register_to("ALL")
