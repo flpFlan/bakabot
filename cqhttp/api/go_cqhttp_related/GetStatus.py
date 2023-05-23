@@ -1,39 +1,35 @@
 """获取状态"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from typing import TypedDict
+from cqhttp.api.base import ApiAction, ResponseBase
 
+
+class Statistics(TypedDict):
+    PacketReceived: int
+    PacketSent: int
+    PacketLost: int
+    MessageReceived: int
+    MessageSent: int
+    DisconnectTimes: int
+    LostTimes: int
+    LastMessageTime: int
+
+class Data(TypedDict):
+    app_initialized: bool
+    app_enabled: bool
+    plugins_good: bool
+    app_good: bool
+    online: bool
+    good: bool
+    stat: Statistics
 
 class Response(ResponseBase):
-    class Data:
-        class Statistics:
-            PacketReceived: int
-            PacketSent: int
-            PacketLost: int
-            MessageReceived: int
-            MessageSent: int
-            DisconnectTimes: int
-            LostTimes: int
-            LastMessageTime: int
-
-        app_initialized: bool
-        app_enabled: bool
-        plugins_good: bool
-        app_good: bool
-        online: bool
-        good: bool
-        stat: Statistics
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class GetStatus(ApiAction[Response]):
     """获取状态"""
 
-    action = "get_status"
-    response: Response
-
-    def __init__(self, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = Response()
-        self.echo = echo
+    action:str = field(init=False,default="get_status")

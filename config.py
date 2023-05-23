@@ -1,7 +1,10 @@
+Administrators = [2104357372, 1502300947]  # users who have full control of your bot
+
 from bot import Bot
 
-Administrators = [2104357372, 1502300947]
+_Bot_: Bot = Bot("BAKA", 2104357372)  # Bot("Aya", 0)
 
-Bots: list[Bot] = [Bot("BAKA", 2104357372)]  # Bot("Aya", 0)
-
-Endpoints = {"BAKA": "localhost:2333"}
+Endpoint = {
+    "event": "localhost:2333",
+    "api": "localhost:2334",
+}  # value should be same with that in go-cqhttp's config.yml

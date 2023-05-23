@@ -1,26 +1,21 @@
 """获取图片信息"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from typing import TypedDict
+from cqhttp.api.base import ApiAction,  ResponseBase
 
+class Data(TypedDict):
+    size: int
+    filename: str
+    url: str
 
 class Response(ResponseBase):
-    class Data:
-        size: int
-        filename: str
-        url: str
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class GetImage(ApiAction[Response]):
     """获取图片信息"""
 
-    action = "get_image"
-    response: Response
-
-    def __init__(self, file: str, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = Response()
-        self.file = file
-        self.echo = echo
+    action:str = field(init=False,default="get_image")
+    file: str

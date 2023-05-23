@@ -1,59 +1,48 @@
 from cqhttp.events.base import CQHTTPEvent
-from cqhttp.events.base import register_to_events
+from dataclasses import dataclass,field
 
-
+@dataclass
 class Request(CQHTTPEvent):
-    post_type = "request"
-    request_type: str
+    post_type :str = "request"
 
-    def __init__(self):
-        super().__init__()
+    request_type: str = field(kw_only=True)
 
 
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class FriendRequest(Request):
     """加好友请求"""
 
-    request_type = "friend"
+    request_type :str = "friend"
 
-    user_id: int
-    comment: str
-    flag: str
+    user_id: int = field(kw_only=True)
+    comment: str = field(kw_only=True)
+    flag: str = field(kw_only=True)
 
-    def __init__(self):
-        super().__init__()
-
-
+@dataclass
 class GroupRequest(Request):
     """加群请求／邀请"""
 
-    request_type = "group"
+    request_type :str = "group"
 
-    sub_type: str
-    group_id: int
-    user_id: int
-    comment: str
-    flag: str
-
-    def __init__(self):
-        super().__init__()
+    sub_type: str = field(kw_only=True)
+    group_id: int = field(kw_only=True)
+    user_id: int = field(kw_only=True)
+    comment: str = field(kw_only=True)
+    flag: str = field(kw_only=True)
 
 
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class GroupAddRequest(GroupRequest):
     """加群请求"""
 
-    sub_type = "add"
-
-    def __init__(self):
-        super().__init__()
+    sub_type:str = "add"
 
 
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class GroupInviteRequest(GroupRequest):
     """邀请登录号入群"""
 
-    sub_type = "invite"
-
-    def __init__(self):
-        super().__init__()
+    sub_type:str = "invite"

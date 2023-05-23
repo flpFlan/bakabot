@@ -1,24 +1,19 @@
 """检查链接安全性"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from typing import TypedDict
+from cqhttp.api.base import ApiAction,  ResponseBase
 
-
+class Data(TypedDict):
+    level: int
+    
 class Response(ResponseBase):
-    class Data:
-        level: int
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class CheckUrlSafely(ApiAction[Response]):
     """检查链接安全性"""
 
-    action = "check_url_safely"
-    response: Response
-
-    def __init__(self, url: str, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = Response()
-        self.url = url
-        self.echo = echo
+    action:str = field(init=False,default="check_url_safely")
+    url: str

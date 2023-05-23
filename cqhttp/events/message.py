@@ -1,141 +1,127 @@
 from typing import Optional
+from dataclasses import dataclass,field
 from cqhttp.events.base import CQHTTPEvent
-from cqhttp.events.base import register_to_events
 
-
+@dataclass
 class Message(CQHTTPEvent):
-    post_type = "message"
-    message_type: str
-    sub_type: str
-    message_id: int
-    user_id: int
-    message: str
-    raw_message: str
-    font: int
-    sender: object
-    message_sent: bool = False
+    @dataclass
+    class Sender:
+        user_id: int = field(kw_only=True)
+        nickname: str = field(kw_only=True)
+        sex: str = field(kw_only=True)
+        age: int = field(kw_only=True)
 
-    def __init__(self):
-        super().__init__()
+    post_type:str = "message"
 
+    message_type: str = field(kw_only=True)
+    sub_type: str = field(kw_only=True)
+    message_id: int = field(kw_only=True)
+    user_id: int = field(kw_only=True)
+    message: str = field(kw_only=True)
+    raw_message: str = field(kw_only=True)
+    font: int = field(kw_only=True)
+    sender: object = field(kw_only=True)
+    message_sent:bool = field(default=False,kw_only=True)
+    
 
+@dataclass
 class PrivateMessage(Message):
     """私聊消息"""
 
-    class Sender:
-        user_id: int
-        nickname: str
-        sex: str
-        age: int
+    message_type:str = "private"
+    
+    sender: Message.Sender = field(kw_only=True)
+    target_id: int = field(kw_only=True)
+    temp_source: int = field(kw_only=True)
+    
+    
 
-    message_type = "private"
-
-    sender: Sender
-    target_id: int
-    temp_source: int
-
-    def __init__(self):
-        super().__init__()
-
-
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class FriendMessage(PrivateMessage):
     """好友消息"""
 
-    sub_type = "friend"
+    sub_type:str = "friend"
 
-    def __init__(self):
-        super().__init__()
-
-
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class GroupTempMessage(PrivateMessage):
     """群临时会话消息"""
 
-    class Sender(PrivateMessage.Sender):
-        group_id: int
+    @dataclass
+    class Sender(Message.Sender):
+        group_id: int = field(kw_only=True)
 
-    sender: Sender
-    sub_type = "group"
+    sub_type:str = "group"
 
-    def __init__(self):
-        super().__init__()
+    sender: Sender = field(kw_only=True)
+    
 
 
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class GroupSelfMessage(PrivateMessage):
     """群中自身发送的消息"""
 
-    sub_type = "group_self"
-
-    def __init__(self):
-        super().__init__()
+    sub_type:str = "group_self"
 
 
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class OtherMessage(PrivateMessage):
     """未分类的私聊消息"""
 
-    sub_type = "other"
-
-    def __init__(self):
-        super().__init__()
+    sub_type:str = "other"
 
 
+@dataclass
 class GroupMessage(Message):
     """群消息"""
 
+    @dataclass
     class Sender:
-        user_id: int
-        nickname: str
-        sex: Optional[str] = None
-        age: Optional[int] = None
-        card: Optional[str] = None
-        area: Optional[str] = None
-        level: Optional[str] = None
-        role: Optional[str] = None
-        title: Optional[str] = None
+        user_id: int = field(kw_only=True)
+        nickname: str = field(kw_only=True)
+        sex: Optional[str] = field(default=None,kw_only=True)
+        age: Optional[int] = field(default=None,kw_only=True)
+        card: Optional[str] = field(default=None,kw_only=True)
+        area: Optional[str] = field(default=None,kw_only=True)
+        level: Optional[str] = field(default=None,kw_only=True)
+        role: Optional[str] = field(default=None,kw_only=True)
+        title: Optional[str] = field(default=None,kw_only=True)
 
+    @dataclass
     class Anonymous:
-        id: int
-        name: str
-        flag: str
+        id: int = field(kw_only=True)
+        name: str = field(kw_only=True)
+        flag: str = field(kw_only=True)
 
-    message_type = "group"
+    message_type:str = "group"
 
-    sender: Sender
-    group_id: int
-    anonymous: Optional[Anonymous]
-
-    def __init__(self):
-        super().__init__()
+    sender: Sender = field(kw_only=True)
+    group_id: int = field(kw_only=True)
+    anonymous: Optional[Anonymous] = field(kw_only=True)
 
 
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class NormalMessage(GroupMessage):
     """正常消息"""
 
-    sub_type = "normal"
-
-    def __init__(self):
-        super().__init__()
+    sub_type:str = "normal"
 
 
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class AnonymousMessage(GroupMessage):
     """匿名消息"""
 
-    sub_type = "anonymous"
-
-    def __init__(self):
-        super().__init__()
+    sub_type:str = "anonymous"
 
 
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class NoticeMessage(GroupMessage):
     """系统提示 ( 如「管理员已禁止群内匿名聊天」 )"""
 
-    sub_type = "notice"
-
-    def __init__(self):
-        super().__init__()
+    sub_type:str = "notice"

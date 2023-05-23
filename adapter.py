@@ -1,59 +1,32 @@
 # -- stdlib --
-import json, logging, asyncio
-from typing import cast
-from urllib.parse import urljoin
-from collections import defaultdict
+import json, logging
+from dataclasses import fields, is_dataclass
+from types import NoneType
+from typing import Optional, get_args
 
 # -- third party --
-from websockets.client import connect
-from websockets.exceptions import ConnectionClosed
-from tenacity import retry, wait_fixed, stop_after_attempt
+from quart import Quart, websocket
 
 # -- own --
-from options import MAX_CONNECT_RETRIES
 from cqhttp.events.base import CQHTTPEvent
-from cqhttp.events.base import all_events
 from cqhttp.api.base import ApiAction
+from utils.algorithm import first
 
 # -- code --
-log = logging.getLogger("bot.go")
-
-
-async def _callback(x):
-    bot = x.args[0].bot
-    await bot.stop()
-    log.error("max retry reached, %sshootdown", bot.name)
-    raise Exception("Max Retry Reached")
+log = logging.getLogger("bot.cqhttp")
 
 
 class CQHTTPAdapter:
-    def __init__(self, bot):
-        from bot import Bot
+    Adapter = Quart(__name__)
 
-        self.bot = bot = cast(Bot, bot)
+    def run(self, host="0.0.0.0", port=2333):
+        self.Adapter.run(host, port)
 
-    @retry(
-        wait=wait_fixed(1),
-        stop=stop_after_attempt(MAX_CONNECT_RETRIES),
-        retry_error_callback=lambda x: asyncio.ensure_future(_callback(x)),
-    )
-    async def connect(self, uri: str):
-        self.evt_connection = await connect(urljoin(uri, "/event"), ping_interval=None)
-        self.api_uri = urljoin(uri, "/api")
-
-    async def disconnect(self):
-        await self.evt_connection.close()
+    async def shutdown(self):
+        await self.Adapter.shutdown()
 
     async def rev_raw(self) -> str:
-        try:
-            raw = await self.evt_connection.recv()
-        except ConnectionClosed:
-            log.warning("event connection shootdown,attempting to reconnect...")
-            host, port = self.evt_connection.host, self.evt_connection.port
-            assert host and port
-            await self.connect(f"{host}:{port}")
-            raw = await self.evt_connection.recv()
-        return cast(str, raw)
+        return await websocket.receive()
 
     async def rev_json(self) -> dict:
         raw = await self.rev_raw()
@@ -63,17 +36,11 @@ class CQHTTPAdapter:
         json = await self.rev_json()
         return self.trans_json_to_evt(json)
 
-    async def api(self, act: ApiAction) -> bool:
+    async def api(self, act: ApiAction) -> dict:
         params = self.trans_action_to_json(act)
-        result = await self._api(**params)
-        if res := act.response:
-            set_attr(res, result)
-        if result.get("status", "failed") == "failed":
-            log.info(f"api call failed:\n{result}")
-            return False
-        return True
+        return await self._api(**params)
 
-    async def _api(self, action: str, echo="", **params) -> dict:  # type: ignore
+    async def _api(self, action: str, echo: Optional[str] = None, **params) -> dict:
         form = {}
         form["action"] = action
         if params:
@@ -82,18 +49,9 @@ class CQHTTPAdapter:
             form["echo"] = echo
 
         data = json.dumps(form)
-        loop = asyncio.get_event_loop()
-        if not (lock := getattr(loop, "api_lock", None)):
-            lock = asyncio.Lock()
-            setattr(loop, "api_lock", lock)
-        async with connect(self.api_uri) as api_connection:
-            try:
-                await api_connection.send(data)
-                result = await api_connection.recv()
-            except ConnectionClosed:
-                log.warning("api connection shootdown")
-                raise Exception("api connection shootdown")
-            return json.loads(result)
+        await websocket.send(data)
+        result = await websocket.receive()
+        return json.loads(result)
 
     @staticmethod
     def trans_json_to_evt(rev: dict) -> CQHTTPEvent:
@@ -102,16 +60,16 @@ class CQHTTPAdapter:
         tt = rev.get(pt + "_type", " ")
         st = rev.get("sub_type", " ")
 
-        evt = all_events[pt][tt][st]()
-        assert evt
-        set_attr(evt, rev)
-        return evt
+        evt = CQHTTPEvent.classes[pt][tt][st]
+        params = {k: v for k, v in get_kwargs(evt, rev)}
+        return evt(**params)
 
     @staticmethod
     def trans_action_to_json(act: ApiAction) -> dict:
+        fs = map(lambda x: x.name, fields(act))
         result = {}
         for name, value in act.__dict__.items():
-            if name in ("bot", "_", "response", "_callback"):
+            if not name in fs:
                 continue
             if isinstance(value, list):
                 l = []
@@ -124,6 +82,20 @@ class CQHTTPAdapter:
         action = getattr(act, "action", None)
         result["action"] = action
         return result
+
+
+def get_kwargs(evt: CQHTTPEvent, json: dict):
+    for f in fields(evt):
+        name, type = f.name, f.type
+        if ts := get_args(type):
+            type = first(ts, lambda x: x is not NoneType)
+            assert type
+        if is_dataclass(type):
+            args = {k: v for k, v in get_kwargs(type, json[name])}
+            value = type(**args)
+        else:
+            value = json[name]
+        yield name, value
 
 
 def set_attr(obj, attrs: dict):
@@ -150,33 +122,41 @@ def set_attr(obj, attrs: dict):
             setattr(obj, name, value)
 
 
-class P_CQHTTPAdapter(CQHTTPAdapter):
-    def __init__(self, bot):
-        super().__init__(bot)
-        import requests
+# TODO
+# async def _callback(x):
+#     bot = x.args[0].bot
+#     await bot.stop()
+#     log.error("max retry reached, %sshootdown", bot.name)
+#     raise Exception("Max Retry Reached")
 
-        self.session = requests.Session()
 
-    @retry(
-        wait=wait_fixed(1),
-        stop=stop_after_attempt(MAX_CONNECT_RETRIES),
-        retry_error_callback=lambda x: asyncio.run(_callback(x)),
-    )
-    async def connect(self, evt_uri: str, api_uri: str):
-        self.evt_connection = await connect(
-            urljoin(evt_uri, "/event"), ping_interval=None
-        )
-        self.api_uri = api_uri
+# class P_CQHTTPAdapter(CQHTTPAdapter):
+#     def __init__(self):
+#         super().__init__()
+#         import requests
 
-    async def _api(self, action: str, echo="", **params) -> dict:
-        form = {}
-        form["action"] = action
-        if params:
-            form["params"] = dict(**params)
-        if echo:
-            form["echo"] = echo
+#         self.session = requests.Session()
 
-        data = json.dumps(form)
-        r = self.session.post(self.api_uri, json=data)
-        r.raise_for_status()
-        return r.json()
+#     @retry(
+#         wait=wait_fixed(1),
+#         stop=stop_after_attempt(MAX_CONNECT_RETRIES),
+#         retry_error_callback=lambda x: asyncio.run(_callback(x)),
+#     )
+#     async def connect(self, evt_uri: str, api_uri: str):
+#         self.evt_connection = await connect(
+#             urljoin(evt_uri, "/event"), ping_interval=None
+#         )
+#         self.api_uri = api_uri
+
+#     async def _api(self, action: str, echo="", **params) -> dict:
+#         form = {}
+#         form["action"] = action
+#         if params:
+#             form["params"] = dict(**params)
+#         if echo:
+#             form["echo"] = echo
+
+#         data = json.dumps(form)
+#         r = self.session.post(self.api_uri, json=data)
+#         r.raise_for_status()
+#         return r.json()

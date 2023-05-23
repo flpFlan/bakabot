@@ -4,7 +4,7 @@ import random
 from typing import cast
 
 # -- own --
-from services.base import register_to, Service, EventHandler
+from services.base import register_service_to, Service, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -23,15 +23,15 @@ class KFCCore(EventHandler):
         service = cast(KFC, self.service)
         m = random.choice(service.texts)
 
-        await SendGroupMsg(evt.group_id, m).do(self.bot)
+        await SendGroupMsg(evt.group_id, m).do()
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class KFC(Service):
     cores = [KFCCore]
 
-    async def start(self):
-        await super().start()
+    async def start_up(self):
+        await super().start_up()
         self.texts = await self.get_texts()
 
     async def get_texts(self):

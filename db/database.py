@@ -4,14 +4,14 @@ from typing import cast
 
 # -- third party --
 # -- own --
+from bot import Bot
+
 # -- code --
 
 
 class DataBase:
-    def __init__(self, bot):
-        from bot import Bot
-
-        self.bot = bot = cast(Bot, bot)
+    def set_bot(self, bot):
+        self.bot = cast(Bot, bot)
 
     async def connect(self, db: str = ""):
         db = db or self.bot.name + ".db"

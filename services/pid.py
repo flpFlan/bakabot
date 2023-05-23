@@ -7,11 +7,12 @@ import requests
 import aiohttp
 
 # -- own --
-from services.base import IMessageFilter, register_to, Service, EventHandler
+from services.base import IMessageFilter, register_service_to, Service, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
 from options import PID_PATH, PID_URL
+from cqhttp.cqcode import Image
 
 # -- code --
 
@@ -29,17 +30,17 @@ class PidCore(EventHandler, IMessageFilter):
 
             if evt.user_id in Administrators:
                 if path := await self.get_art(pid):
-                    m = f"[CQ:image,file=file:///{path}]"
+                    m = f"{Image(f'file:///{path}')}"
                 else:
                     m = "這個作品可能已被刪除，或無法取得。\n該当作品は削除されたか、存在しない作品IDです。"
             else:
                 m = await self.get_art_webVer(pid)
-                m = "" or "這個作品可能已被刪除，或無法取得。\n該当作品は削除されたか、存在しない作品IDです。"
+                m = m or "這個作品可能已被刪除，或無法取得。\n該当作品は削除されたか、存在しない作品IDです。"
 
         except requests.ConnectTimeout:
             m = "请求失败，请稍后再试"
 
-        await SendGroupMsg(evt.group_id, m).do(self.bot)
+        await SendGroupMsg(evt.group_id, m).do()
 
     async def get_art(self, pid):
         url = f"https://pixiv.cat/{pid}.jpg"
@@ -68,6 +69,6 @@ class PidCore(EventHandler, IMessageFilter):
         return urljoin(PID_URL, f"{pid}.{format}")
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class Pid(Service):
     cores = [PidCore]

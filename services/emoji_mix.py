@@ -6,10 +6,11 @@ import emoji
 import aiohttp
 
 # -- own --
-from services.base import IMessageFilter, register_to, Service, EventHandler
+from services.base import IMessageFilter, register_service_to, Service, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
+from cqhttp.cqcode import Image
 
 
 # -- code --
@@ -34,11 +35,11 @@ class EmojiMixCore(EventHandler, IMessageFilter):
         self.format_emoji(emoji2)
         try:
             url = await self.get_mix_url(emoji1, emoji2)
-            m = f"[CQ:image,file={url}]"
+            m = f"{Image(file=url)}"
         except EmojiError:
             m = '啊哦，似乎发生了一些错误Σ(⊙▽⊙"a\n请检查内容后重试'
 
-        await SendGroupMsg(evt.group_id, m).do(self.bot)
+        await SendGroupMsg(evt.group_id, m).do()
 
     async def get_mix_url(self, emoji1, emoji2):
         emoji1 = hex(ord(emoji1)).replace("0x", "u")
@@ -58,6 +59,6 @@ class EmojiMixCore(EventHandler, IMessageFilter):
         return emoji
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class EmojiMix(Service):
     cores = [EmojiMixCore]

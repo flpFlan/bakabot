@@ -4,7 +4,7 @@ import random
 from typing import cast
 
 # -- own --
-from services.base import IMessageFilter, register_to, Service, EventHandler
+from services.base import IMessageFilter, register_service_to, Service, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -24,15 +24,15 @@ class BarberShopCore(EventHandler, IMessageFilter):
         service = cast(BarberShop, self.service)
         word = random.choice(service.words).replace("阿咪", name)
 
-        await SendGroupMsg(evt.group_id, word).do(self.bot)
+        await SendGroupMsg(evt.group_id, word).do()
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class BarberShop(Service):
     cores = [BarberShopCore]
 
-    async def start(self):
-        await super().start()
+    async def start_up(self):
+        await super().start_up()
         self.words = await self.get_words()
 
     async def get_words(self) -> list[str]:

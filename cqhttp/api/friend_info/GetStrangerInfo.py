@@ -1,32 +1,26 @@
 """获取陌生人信息"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from typing import  TypedDict
+from cqhttp.api.base import ApiAction, ResponseBase
 
+class Data(TypedDict):
+    user_id: int
+    nickname: str
+    sex: str
+    age: int
+    qid: str
+    level: int
+    login_days: int
 
 class Response(ResponseBase):
-    class Data:
-        user_id: int
-        nickname: str
-        sex: str
-        age: int
-        qid: str
-        level: int
-        login_days: int
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class GetStrangerInfo(ApiAction[Response]):
     """获取陌生人信息"""
 
-    action = "get_stranger_info"
-    response: Response
-
-    def __init__(
-        self, user_id: int, no_cache: bool = False, *, echo: Optional[str] = None
-    ):
-        super().__init__()
-        self.response = Response()
-        self.user_id = user_id
-        self.echo = echo
+    action:str = field(init=False,default="get_stranger_info")
+    user_id: int
+    no_cache: bool = False

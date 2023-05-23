@@ -3,7 +3,7 @@ import re
 
 # -- third party --
 # -- own --
-from services.base import register_to, Service, IMessageFilter, EventHandler
+from services.base import register_service_to, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from .bilibili_cover import av_to_bv, bv_to_av
@@ -29,7 +29,7 @@ class BilibiliABTransCore(EventHandler, IMessageFilter):
                 id = self.trans_av(arg)
             else:
                 id = self.tans_bv(arg)
-            await SendGroupMsg(group_id, str(id)).do(bot)
+            await SendGroupMsg(group_id, str(id)).do()
 
     def tans_bv(self, arg: str):
         arg = "BV" + arg
@@ -45,6 +45,6 @@ class BilibiliABTransCore(EventHandler, IMessageFilter):
             return "转换失败"
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class BilibiliABTrans(Service):
     cores = [BilibiliABTransCore]

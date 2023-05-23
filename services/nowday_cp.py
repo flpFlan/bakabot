@@ -8,7 +8,7 @@ from collections import defaultdict
 # -- own --
 from services.base import (
     IMessageFilter,
-    register_to,
+    register_service_to,
     Service,
     EventHandler,
     SheduledHandler,
@@ -16,6 +16,7 @@ from services.base import (
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.api.group_info.GetGroupMemberList import GetGroupMemberList
+from cqhttp.cqcode import At, Image
 
 # -- code --
 
@@ -36,7 +37,7 @@ class NowdayCPCore(EventHandler):
             cp_qq = cp[0]
             cp_name = cp[1]
         else:
-            group_members = await GetGroupMemberList(group_id).do(bot)
+            group_members = await GetGroupMemberList(group_id).do()
             assert group_members
             group_members = [
                 (member.user_id, member.card or member.nickname)
@@ -45,22 +46,20 @@ class NowdayCPCore(EventHandler):
             random.shuffle(group_members)
             member_graph = cp_graph[group_id]
             while True:
-                cp = group_members.pop()
-                if not cp[0] in member_graph:
-                    if not cp[0] == 2854196310 or len(member_graph) == 0:
-                        cp_qq, cp_name = cp
-                        break
+                cp_qq, cp_name = group_members.pop()
+                if not cp_qq in member_graph and not cp_qq == 2854196310:  # Q群管家
+                    break
             service.add(group_id, qq_number, cp_qq, cp_name)
             service.add(
                 group_id, cp_qq, qq_number, evt.sender.card or evt.sender.nickname
             )
         photo = f"http://q1.qlogo.cn/g?b=qq&nk={cp_qq}&s=640"
         if word := CPWord.instance.words.get(cp_qq, None):
-            m = f"[CQ:at,qq={qq_number}]\n您的今日cp是:\n{cp_name}[CQ:image,file={photo}]\n>>>\n{word}"
+            m = f"{At(qq_number)}\n您的今日cp是:\n{cp_name}{Image(photo)}\n>>>\n{word}"
         else:
-            m = f"[CQ:at,qq={qq_number}]\n您的今日cp是:\n{cp_name}[CQ:image,file={photo}]"
+            m = f"{At(qq_number)}\n您的今日cp是:\n{cp_name}{Image(photo)}"
 
-        await SendGroupMsg(group_id, m).do(bot)
+        await SendGroupMsg(group_id, m).do()
 
 
 class RefreshCP(SheduledHandler):
@@ -98,10 +97,10 @@ class CPWord(EventHandler, IMessageFilter):
         word = r.get("word", "")
         if not len(word) > 200:
             self.set(evt.user_id, word)
-            m = f"[CQ:at,qq={evt.user_id}]\n设置成功~"
+            m = f"{At(evt.user_id)}\n设置成功~"
         else:
             m = "设置失败！字数溢出！"
-        await SendGroupMsg(evt.group_id, m).do(self.bot)
+        await SendGroupMsg(evt.group_id, m).do()
 
     def get(self) -> dict[int, str]:
         db = self.bot.db
@@ -130,12 +129,12 @@ class CPWord(EventHandler, IMessageFilter):
         self.words.clear()
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class NowdayCP(Service):
     cores = [NowdayCPCore, RefreshCP, CPWord]
 
-    async def start(self):
-        await super().start()
+    async def start_up(self):
+        await super().start_up()
         bot = self.bot
         bot.db.execute(
             "create table if not exists "

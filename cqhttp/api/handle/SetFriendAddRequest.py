@@ -1,25 +1,15 @@
 """处理加好友请求"""
+from dataclasses import dataclass, field
 from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from cqhttp.api.base import ApiAction,  ResponseBase
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class SetFriendAddRequest(ApiAction[ResponseBase]):
     """处理加好友请求"""
 
-    action = "set_friend_add_request"
-
-    def __init__(
-        self,
-        flag: str,
-        approve: bool = False,
-        remark: str = "",
-        *,
-        echo: Optional[str] = None
-    ):
-        super().__init__()
-        self.response = ResponseBase()
-        self.flag = flag
-        self.approve = approve
-        self.remark = remark
-        self.echo = echo
+    action:str = field(init=False,default="set_friend_add_request")
+    flag: str
+    approve: bool = False
+    remark: Optional[str]=None

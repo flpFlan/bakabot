@@ -4,10 +4,11 @@ import requests
 
 # -- third party --
 # -- own --
-from services.base import register_to, Service, IMessageFilter, EventHandler
+from services.base import register_service_to, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
+from cqhttp.cqcode import Image
 
 # -- code --
 
@@ -51,10 +52,10 @@ class BilibiliCoverCore(EventHandler, IMessageFilter):
             arg = bv_to_av("BV" + arg)
             type = "av"
         if url := await self.get_b_cover(arg, type):
-            await SendGroupMsg(group_id, f"[CQ:image,file={url}]").do(bot)
+            await SendGroupMsg(group_id, Image(url)).do()
             return
         m = "呜，房间为空" if type == "live" else "呜，稿件为空"
-        await SendGroupMsg(group_id, m).do(bot)
+        await SendGroupMsg(group_id, m).do()
 
     async def get_b_cover(self, id, type="av"):
         url = f"https://apiv2.magecorn.com/bilicover/get?"
@@ -63,6 +64,6 @@ class BilibiliCoverCore(EventHandler, IMessageFilter):
         return r.get("url", None)
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class BilibiliCover(Service):
     cores = [BilibiliCoverCore]

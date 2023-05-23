@@ -1,56 +1,45 @@
 """发送群聊消息"""
 import asyncio
+from dataclasses import dataclass, field
 import threading
 import time
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from typing import Optional, TypedDict
+from cqhttp.api.base import ApiAction,  ResponseBase
+from cqhttp.cqcode.base import CQCode
 
+class Data(TypedDict):
+    message_id: int
 
 class Response(ResponseBase):
-    class Data:
-        message_id: int
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class SendGroupMsg(ApiAction[Response]):
     """发送群聊消息"""
 
-    action = "send_group_msg"
-    response: Response
-
-    def __init__(
-        self,
-        group_id: int,
-        message: str,
-        auto_escape: bool = False,
-        *,
-        echo: Optional[str] = None
-    ):
-        super().__init__()
-        self.response = Response()
-        self.group_id = group_id
-        self.message = message
-        self.auto_escape = auto_escape
-        self.echo = echo
+    action:str = field(init=False,default="send_group_msg")
+    group_id: int
+    message: str |bool| CQCode
+    auto_escape: bool = False
 
     @staticmethod
     def many(
         group_list: list[int] | set[int],
-        message: str,
+        message: str | CQCode,
         auto_escape: bool = False,
         *,
         echo: Optional[str] = None
     ):
-        return SendManyGroupMsg(group_list, message, auto_escape, echo=echo)
+        return SendManyGroupMsg(group_list, str(message), auto_escape, echo=echo)
 
 
 class SendManyGroupMsg:
     def __init__(
         self,
         group_list: list[int] | set[int],
-        message: str,
+        message: str | CQCode,
         auto_escape: bool = False,
         *,
         echo: Optional[str] = None
@@ -60,7 +49,7 @@ class SendManyGroupMsg:
         self.auto_escape = auto_escape
         self.echo = echo
 
-    def do(self, bot, interval=3):
+    def do(self, interval=3):
         def target():
             group_list = self.group_list
             message = self.message
@@ -72,7 +61,7 @@ class SendManyGroupMsg:
                     message=message,
                     auto_escape=auto_escape,
                     echo=echo,
-                ).do(bot)
+                ).do()
                 asyncio.run(task)
                 time.sleep(interval)
 

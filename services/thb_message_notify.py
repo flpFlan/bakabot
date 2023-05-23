@@ -11,9 +11,9 @@ import redis
 
 # -- own --
 from services.base import (
-    register_to,
+    register_service_to,
     Service,
-    ServiceCore,
+    ServiceBehavior,
     EventHandler,
     IMessageFilter,
 )
@@ -38,7 +38,7 @@ ServerNames = {
 }
 
 
-class THBMessageNotifyCore(ServiceCore):
+class THBMessageNotifyCore(ServiceBehavior):
     shedule_trigger = "interval"
     args = {"seconds": 1}
 
@@ -96,7 +96,7 @@ class THBMessageNotifyCore(ServiceCore):
         )
         service = cast(THBMessageNotify, self.service)
         bot = self.bot
-        SendGroupMsg.many(service.thb_notify_groups, send).do(bot, interval=1)
+        SendGroupMsg.many(service.thb_notify_groups, send).do(interval=1)
 
     def close(self):
         super().close()
@@ -119,18 +119,18 @@ class NotifyGroupManager(EventHandler, IMessageFilter):
             group_id = evt.group_id
             if action == "on":
                 service.add_notify_group(group_id)
-                await SendGroupMsg(group_id, "THBMessageNotify已启用").do(bot)
+                await SendGroupMsg(group_id, "THBMessageNotify已启用").do()
             if action == "off":
                 service.del_notify_group(group_id)
-                await SendGroupMsg(group_id, "THBMessageNotify已关闭").do(bot)
+                await SendGroupMsg(group_id, "THBMessageNotify已关闭").do()
 
 
-@register_to("Aya")
+@register_service_to("Aya")
 class THBMessageNotify(Service):
     cores = [NotifyGroupManager, THBMessageNotifyCore]
 
-    async def start(self):
-        await super().start()
+    async def start_up(self):
+        await super().start_up()
         from bot import Bot
 
         bot = cast(Bot, self.bot)

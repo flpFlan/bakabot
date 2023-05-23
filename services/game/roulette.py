@@ -15,22 +15,24 @@ class RouletteBehavior(GameBehavior):
         if self.game.init_state:
             return
         game = cast(Roulette, self.game)
+        if not evt.group_id == game.group_id:
+            return
+        if self.filter(evt) is None:
+            return
         blt_nst = game.blt_nst
-        bot = self.bot
-        if self.filter(evt) is not None:
-            import random
+        import random
 
-            if sum(blt_nst) == 0:  # all nst has blt
-                if not random.choice(range(3)):
-                    await SendGroupMsg(evt.group_id, "玩家...子弹卡壳，发射不能∑(°口°๑)❢❢").do(bot)
-                    return
-            no_blt = random.choice(blt_nst)
-            if not no_blt:
-                await self.end_game(evt)
-                game.kill()
-            else:
-                del blt_nst[-1]
-                await SendGroupMsg(evt.group_id, "无事发生，有请下一位玩家。").do(bot)
+        if sum(blt_nst) == 0:  # all nst has blt
+            if not random.choice(range(3)):
+                await SendGroupMsg(evt.group_id, "玩家...子弹卡壳，发射不能∑(°口°๑)❢❢").do()
+                return
+        no_blt = random.choice(blt_nst)
+        if not no_blt:
+            await self.end_game(evt)
+            game.kill()
+        else:
+            del blt_nst[-1]
+            await SendGroupMsg(evt.group_id, "无事发生，有请下一位玩家。").do()
 
     async def end_game(self, evt: GroupMessage):
         bot = self.bot
@@ -40,14 +42,14 @@ class RouletteBehavior(GameBehavior):
             name = evt.anonymous.name
         else:
             name = evt.sender.card or evt.sender.nickname
-        await SendGroupMsg(group_id, f"玩家{name}被弹幕击中满身疮痍，游戏结束").do(bot)
+        await SendGroupMsg(group_id, f"玩家{name}被弹幕击中满身疮痍，游戏结束").do()
         if game.set_ban:
             if evt.anonymous:
                 await SetGroupAnonymousBan(
                     group_id, anonymous=evt.anonymous, duration=game.set_ban
-                ).do(bot)
+                ).do()
             else:
-                await SetGroupBan(group_id, evt.user_id, duration=game.set_ban).do(bot)
+                await SetGroupBan(group_id, evt.user_id, duration=game.set_ban).do()
 
 
 class RouletteInit(GameBehavior):
@@ -63,8 +65,11 @@ class RouletteInit(GameBehavior):
         game = cast(Roulette, self.game)
         if not game.init_state:
             return
+        if not evt.group_id == game.group_id:
+            return
         if evt.message == "*s":
             game.init_state = False
+            game.gen_blt_nst()
             return
         if r := self.filter(evt):
             action = r.get("action", "")
@@ -86,25 +91,26 @@ class RouletteInit(GameBehavior):
                 if arg < 0:
                     return evt
                 game.set_ban = arg  # type: ignore
-            await SendGroupMsg(evt.group_id, game.word()).do(self.bot)
+            await SendGroupMsg(evt.group_id, game.word).do()
 
     async def _callback(self, evt: GroupMessage):
-        await SendGroupMsg(evt.group_id, "设置不能→_→").do(self.bot)
+        await SendGroupMsg(evt.group_id, "设置不能→_→").do()
 
 
 @register_to_game("俄罗斯转盘")
 @register_to_game("俄罗斯轮盘")
 class Roulette(Game):
     behavior = [RouletteInit, RouletteBehavior]
-    init_state = True
-    blt_num = 1
-    blt_nst_num = 6
-    blt_nst = [0 for _ in range(blt_num)] + [1 for _ in range(blt_nst_num - blt_num)]
-    set_ban = False
 
-    def __init__(self, bot, group_id, owner_id):
-        super().__init__(bot, group_id, owner_id)
-        asyncio.ensure_future(SendGroupMsg(group_id, self.word()).do(bot))
+    async def start(self):
+        self.init_state = True
+        self.blt_num = 1
+        self.blt_nst_num = 6
+        self.set_ban = False
+        await SendGroupMsg(self.group_id, self.word).do()
 
+    def gen_blt_nst(self):
+        self.blt_nst = [0 for _ in range(self.blt_num)] + [1 for _ in range(self.blt_nst_num - self.blt_num)]
+    @property
     def word(self):
         return f'现在进行初始化配置\n发送相关语句进行设置\n#设置弹巢数({self.blt_nst_num})\n#设置子弹数({self.blt_num})\n#设置禁言({self.set_ban or 0})(单位:秒)\n(需管理权限)\n键入"*s"以开始游戏。'

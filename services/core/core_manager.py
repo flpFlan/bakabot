@@ -78,12 +78,12 @@ class BotControl(EventHandler, IMessageFilter):
         group_id = evt.group_id
         if msg == "/bot on":
             BlockGroup.instance.delete(group_id)
-            await SendGroupMsg(group_id, f"{bot.name} running！").do(bot)
+            await SendGroupMsg(group_id, f"{bot.name} running！").do()
         if msg == "/bot off":
             BlockGroup.instance.add(group_id)
             c = SendGroupMsg(group_id, f"{bot.name} closed")
             c._.args["bot off"] = True
-            await c.do(bot)
+            await c.do()
 
     def close(self):
         pass
@@ -106,7 +106,7 @@ class ServiceControl(EventHandler, IMessageFilter):
             group_id = evt.group_id
             if r.get("get", None):
                 bot = self.bot
-                await SendGroupMsg(group_id, str(self.get_all_services())).do(bot)
+                await SendGroupMsg(group_id, str(self.get_all_services())).do()
             if s := r.get("service_to_close", None):
                 await self.close_service(group_id, s)
             if s := r.get("service_to_start", None):
@@ -124,20 +124,20 @@ class ServiceControl(EventHandler, IMessageFilter):
         for s in bot.services:
             if s.__class__.__name__ == service:
                 if not s.service_on:
-                    await SendGroupMsg(group_id, f"{service}已处于关闭状态！").do(bot)
+                    await SendGroupMsg(group_id, f"{service}已处于关闭状态！").do()
                     return
                 await s.close()
-                await SendGroupMsg(group_id, f"{service}已关闭").do(bot)
+                await SendGroupMsg(group_id, f"{service}已关闭").do()
 
     async def start_service(self, group_id, service):
         bot = self.bot
         for s in bot.services:
             if s.__class__.__name__ == service:
                 if s.service_on:
-                    await SendGroupMsg(group_id, f"{service}已处于开启状态！").do(bot)
+                    await SendGroupMsg(group_id, f"{service}已处于开启状态！").do()
                     return
                 await s.start()
-                await SendGroupMsg(group_id, f"{service}已开启").do(bot)
+                await SendGroupMsg(group_id, f"{service}已开启").do()
 
     def close(self):
         pass

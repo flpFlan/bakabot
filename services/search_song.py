@@ -7,9 +7,10 @@ from Crypto.Cipher import AES
 import fake_useragent
 
 # -- own --
-from services.base import register_to, Service, IMessageFilter, EventHandler
+from services.base import register_service_to, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+from cqhttp.cqcode import Music
 
 
 # -- code --
@@ -82,12 +83,12 @@ class SearchSongCore(EventHandler, IMessageFilter):
             song = r["song"]
             id = await self.search_song(song)
             if id is None:
-                await SendGroupMsg(evt.group_id, "啊哦Σ(⊙▽⊙，没有找到相关歌曲").do(bot)
+                await SendGroupMsg(evt.group_id, "啊哦Σ(⊙▽⊙，没有找到相关歌曲").do()
                 return
             if id == "error":
-                await SendGroupMsg(evt.group_id, "牙白，发生了不知名的错误！").do(bot)
+                await SendGroupMsg(evt.group_id, "牙白，发生了不知名的错误！").do()
                 return
-            await SendGroupMsg(evt.group_id, f"[CQ:music,type=163,id={id}]").do(bot)
+            await SendGroupMsg(evt.group_id, Music("163", id)).do()
 
     async def search_song(self, search_content, search_type=1, limit=1):
         """
@@ -120,6 +121,6 @@ class SearchSongCore(EventHandler, IMessageFilter):
                 return song_id
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class SearchSong(Service):
     cores = [SearchSongCore]

@@ -56,14 +56,14 @@ class Ping(EventHandler, IMessageFilter):
                 if not name == bot.name:
                     return
                 service.add(id)
-                await SendGroupMsg(id, "%s已在本群启用！" % bot.name).do(bot)
+                await SendGroupMsg(id, "%s已在本群启用！" % bot.name).do()
             if r.get("delete", None):
                 name = r.get("bot", "")
                 if not name == bot.name:
                     return
                 service.delete(id)
             if r.get("leave", None):
-                await SetGroupLeave(evt.group_id).do(bot)
+                await SetGroupLeave(evt.group_id).do()
 
 
 @core_service
@@ -104,5 +104,5 @@ class WhiteList(Service):
         bot.db.execute("delete from whitelist where group_id = ?", (group_id,))
         whitelist.remove(group_id)
 
-    def close(self):
+    def shutdown(self):
         log.warning("core service could not be close")

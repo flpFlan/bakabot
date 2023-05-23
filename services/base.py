@@ -1,73 +1,98 @@
 # -- stdlib --
-import asyncio
 import logging
-from typing import Type, cast
+from typing import Callable, Generic, Type, TypeVar, cast, get_args, get_type_hints
 from re import compile
 
 # -- third party --
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.schedulers.background import BackgroundScheduler
 
 # -- own --
-from config import Bots
+from accio import Accio
+from cqhttp.base import Event
 
 # -- code --
 
 log = logging.getLogger("bot.service")
 
-
-class ServiceCore:
-    core_on = False
-
+class ServiceBehavior:
     def __init__(self, service):
-        from bot import Bot
+        self.service = cast(Service,service)
+        self.set_active(False)
 
-        self.service = service
-        self.bot = getattr(self, "bot", None) or cast(Bot, None)
-        if isinstance(self, IMessageFilter):
-            IMessageFilter.__init__(self)
+    def set_active(self, active: bool):
+        self._active = active
 
-    def run(self):
-        self.core_on = True
+    def get_active(self):
+        return self._active
 
-    def close(self):
-        self.core_on = False
-
-
-class EventHandler(ServiceCore):
-    from cqhttp.base import Event
-
-    interested: list[Type[Event]]
-
-    async def handle(self, evt: Event):
-        ...  # to override it
-
-
-class IMessageFilter:
-    from cqhttp.events.message import Message
-
-    entrys = []
-    entry_flags = 0
+class Service:
+    priority = 3
+    behavior:list[Type[ServiceBehavior]] = []
+    execute_before:list[Type[ServiceBehavior]] = []
+    execute_after:list[Type[ServiceBehavior]] = []
 
     def __init__(self):
-        entry = self.entrys
-        self.entrys = [compile(et, self.entry_flags) for et in entry]
+        self.set_active(False)
 
-    def filter(self, evt: Message):
-        msg = evt.message
-        for _entry in self.entrys:
-            if match := _entry.match(msg):
-                return match.groupdict()
+    def set_active(self,active:bool):
+        self._active=active
+
+    def get_active(self):
+        return self._active
+
+    async def start_up(self):
+        db = Accio.bot.db
+        service = self.__class__.__name__
+        db.execute(
+            """
+            insert or replace into services (service,service_on) values (?,?)
+            """,
+            (service, True),
+        )
+        db.commit()
+        for core in self.behavior:
+            core.set_active(True)
+        self.set_active(True)
+
+    async def shutdown(self):
+        db = bot.db
+        service = self.__class__.__name__
+        db.execute(
+            "insert or replace into services (service,service_on) values (?,?)",
+            (service, False),
+        )
+        db.commit()
+        for core in self.behavior:
+            core.set_active(False)
+        self.set_active(False)
+
+_TEvent=TypeVar("_TEvent",bound=Event)
+
+class EventHandler(Generic[_TEvent]):
+    handlers:dict[Event,set[Callable[[ServiceBehavior,_TEvent],_TEvent]]]
+ 
+    @staticmethod
+    def register(f:Callable[[ServiceBehavior,_TEvent],_TEvent]):
+        args=list(get_type_hints(f).values())
+        assert len(args)==1,"there must be one param with type declaration!"
+        args=set(get_args(args[0]))
+        from cqhttp.base import
+        for arg in args:
+            for evt in all_events:
+                if not issubclass(evt,arg):
+                    continue
+
+        return f
 
 
-class SheduledHandler(ServiceCore):
+class SheduledHandler(ServiceBehavior):
     shedule_trigger: str
     args: dict
 
     def run(self):
         super().run()
         self.jobs = jobs = []
-        self.scheduler = scheduler = AsyncIOScheduler()  # BackgroundScheduler()
+        self.scheduler = scheduler = AsyncIOScheduler()
         if self.shedule_trigger == "interval":
             jobs.append(scheduler.add_job(self.handle, "interval", **self.args))
         if self.shedule_trigger == "cron":
@@ -82,66 +107,34 @@ class SheduledHandler(ServiceCore):
     async def handle(self):
         ...
 
+class IMessageFilter:
+    from cqhttp.events.message import Message
 
-class Service:
-    priority = 3
-    service_on = False
-    cores = []
-    execute_before = []
-    execute_after = []
+    entrys = []
+    entry_flags = 0
 
-    def __init__(self, bot):
-        from bot import Bot
+    def __init_subclass__(cls):
+        entry=cls.entrys
+        cls.entrys=[compile(et, cls.entry_flags) for et in entry]
 
-        self.bot = bot = cast(Bot, bot)
-        self.cores = [core(self) for core in self.cores]  # type: ignore
-        self.cores = cast(list[ServiceCore], self.cores)
-        for core in self.cores:
-            core.bot = bot
+    def filter(self, evt: Message):
+        msg = evt.message
+        for _entry in self.entrys:
+            if match := _entry.match(msg):
+                return match.groupdict()
 
-    async def start(self):
-        bot = self.bot
-        db = bot.db
-        service = self.__class__.__name__
-        db.execute(
-            """
-            insert or replace into services (service,service_on) values (?,?)
-            """,
-            (service, True),
-        )
-        db.commit()
-        for core in self.cores:
-            core.run()
-        self.service_on = True
-
-    async def close(self):
-        bot = self.bot
-        db = bot.db
-        service = self.__class__.__name__
-
-        db.execute(
-            "insert or replace into services (service,service_on) values (?,?)",
-            (service, False),
-        )
-        db.commit()
-        for core in self.cores:
-            core.close()
-        self.service_on = False
-
-
-def register_to(*bots):
+def register_service_to(*bots):
     if "all" in bots or "ALL" in bots:
-        bots = [b.name for b in Bots]
+        bots = [Accio.bot.name]
 
     def register(cls):
-        for b in Bots:
-            if b.name in bots:
-                b.services.append(cls)
+        if Accio.bot.name in bots:
+            Accio.bot.services.append(cls)
         return cls
 
     def except_for(*_bots):
         include = [b for b in bots if b not in _bots]
-        return register_to(include)
+        return register_service_to(include)
 
     register.except_for = except_for
     return register

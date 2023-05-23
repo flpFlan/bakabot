@@ -5,13 +5,14 @@ from urllib.parse import quote
 
 # -- third party --
 # -- own --
-from services.base import register_to, Service, IMessageFilter, EventHandler
+from services.base import register_service_to, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
+from cqhttp.cqcode import Record
 
 # -- code --
-type = {
+TYPE = {
     "1": "f1",
     "2": "f2",
     "3": "m1",
@@ -37,15 +38,15 @@ class YukkuriCore(EventHandler, IMessageFilter):
             try:
                 content = (await self.trans_to_jp(content)).replace(" ", "")
             except requests.ConnectTimeout:
-                await SendGroupMsg(group_id, "反应不能(✘_✘)").do(bot)
+                await SendGroupMsg(group_id, "反应不能(✘_✘)").do()
                 return
 
             if len(content) > 140:
-                await SendGroupMsg(group_id, "超出字数限制").do(bot)
+                await SendGroupMsg(group_id, "超出字数限制").do()
                 return
-            await self.get_yukkuri(content, sub_type=type)
+            await self.get_yukkuri(content, sub_type=TYPE.get(type, "") or type)
             path = os.path.abspath(r"src\temp\yukkuri_temp.mp3")
-            await SendGroupMsg(group_id, f"[CQ:record,file=file:///{path}]").do(bot)
+            await SendGroupMsg(group_id, Record(f"file:///{path}")).do()
 
     async def get_yukkuri(self, text, type=1, sub_type="f1"):
         text = quote(text)
@@ -64,7 +65,7 @@ class YukkuriCore(EventHandler, IMessageFilter):
             "optionext": "zenkaku",
         }
         url = "https://www.ltool.net/chinese-simplified-and-traditional-characters-pinyin-to-katakana-converter-in-simplified-chinese.php"
-        r = Request.Sync.get_text(url)
+        r = Request.Sync.post_text(url, data=data)
         return self.filt_html(r)
 
     def filt_html(self, html):
@@ -80,6 +81,6 @@ class YukkuriCore(EventHandler, IMessageFilter):
         return final_result
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class Yukkuri(Service):
     cores = [YukkuriCore]

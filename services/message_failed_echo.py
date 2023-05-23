@@ -4,7 +4,7 @@ import time
 
 # -- third party --
 # -- own --
-from services.base import register_to, Service, EventHandler
+from services.base import register_service_to, Service, EventHandler
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.api.message.SendMsg import SendMsg
 
@@ -31,14 +31,12 @@ class MessageFailedEchoCore(EventHandler):
                 return
             assert evt.group_id
             asyncio.create_task(
-                SendGroupMsg(evt.group_id, "谔谔，该消息被腾讯拦截", echo="msg_failed_echo").do(
-                    self.bot
-                )
+                SendGroupMsg(evt.group_id, "谔谔，该消息被腾讯拦截", echo="msg_failed_echo").do()
             )
 
         evt._callback = echo
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class MessageFailedEcho(Service):
     cores = [MessageFailedEchoCore]

@@ -3,7 +3,7 @@ from re import compile
 
 # -- third party --
 # -- own --
-from services.base import register_to, Service, EventHandler, IMessageFilter
+from services.base import register_service_to, Service, EventHandler, IMessageFilter
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.DeleteMsg import DeleteMsg
 from config import Administrators
@@ -28,9 +28,9 @@ class TakeBackMsgCore(EventHandler, IMessageFilter):
             return
         id = r.get("id", "")
 
-        await DeleteMsg(int(id)).do(self.bot)
+        await DeleteMsg(int(id)).do()
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class TakeBackMsg(Service):
     cores = [TakeBackMsgCore]

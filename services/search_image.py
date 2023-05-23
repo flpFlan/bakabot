@@ -6,10 +6,11 @@ import requests
 # -- third party --
 
 # -- own --
-from services.base import register_to, Service, IMessageFilter, EventHandler
+from services.base import register_service_to, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
+from cqhttp.cqcode import Image
 
 # -- code --
 
@@ -28,10 +29,10 @@ class SearchImageCore(EventHandler, IMessageFilter):
             try:
                 await self.search(tag)
                 path = os.path.abspath(r".\src\temp\search_img_temp.jpg")
-                m = f"[CQ:image,file=file:///{path}]"
+                m = f"{Image(f'file:///{path}')}"
             except requests.ConnectTimeout:
                 m = "请求超时(Ｔ▽Ｔ)"
-        await SendGroupMsg(evt.group_id, m).do(self.bot)
+        await SendGroupMsg(evt.group_id, m).do()
 
     async def search(self, tag):
         url = f"https://image.baidu.com/search/acjson?tn=resultjson_com&word={tag}&pn=0"
@@ -43,6 +44,6 @@ class SearchImageCore(EventHandler, IMessageFilter):
             file.close()
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class SearchImage(Service):
     cores = [SearchImageCore]

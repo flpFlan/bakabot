@@ -4,9 +4,10 @@ import random
 
 # -- third party --
 # -- own --
-from services.base import register_to, Service, EventHandler, IMessageFilter
+from services.base import register_service_to, Service, EventHandler, IMessageFilter
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+from cqhttp.cqcode import At
 
 # -- code --
 
@@ -22,14 +23,14 @@ class ChooseOrCore(EventHandler, IMessageFilter):
         if not all(choices):
             return
         final_choice = random.choice(choices)
-        m = f"[CQ:at,qq={evt.user_id}]\n"
+        m = f"{At(evt.user_id)}\n"
         for i, c in enumerate(choices):
             m += f"{i + 1}、{c}\n"
         m += f"建议你选择：{final_choice}"
 
-        await SendGroupMsg(evt.group_id, m).do(self.bot)
+        await SendGroupMsg(evt.group_id, m).do()
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class ChooseOr(Service):
     cores = [ChooseOrCore]

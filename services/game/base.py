@@ -48,7 +48,11 @@ class Game:
         self.behavior = [b(bot, self) for b in self.behavior]
         self.behavior = cast(list[GameBehavior], self.behavior)
         self.timer: Optional[threading.Timer] = None
-        self.check()
+        self._check()
+        asyncio.create_task(self.start())
+
+    async def start(self):
+        ...  # to override it
 
     async def process_evt(self, evt: CQHTTPEvent):
         if self.game_over:
@@ -67,9 +71,9 @@ class Game:
                 return
 
         if has_handler:
-            self.check()
+            self._check()
 
-    def check(self):
+    def _check(self):
         tick = self.tick
         if tick == -1:
             return
@@ -78,9 +82,7 @@ class Game:
 
         def t():
             asyncio.run(
-                SendGroupMsg(self.group_id, f"长时间未操作，游戏结束。({self.owner_id})").do(
-                    self.bot
-                )
+                SendGroupMsg(self.group_id, f"长时间未操作，游戏结束。({self.owner_id})").do()
             )
             self.kill()
 
@@ -89,14 +91,17 @@ class Game:
 
     def kill(self):
         self.game_over = True
-        ManagerCore.games.remove(self)
+        try:
+            ManagerCore.games.pop(self.owner_id)
+        except:
+            pass
         del self
 
 
 class ManagerCore(EventHandler, IMessageFilter):
     interested = [CQHTTPEvent]
     entrys = [r"^/game\s+(?P<game>.+)"]
-    games: list[Game] = []
+    games: dict[int, Game] = {}
 
     def __init__(self, service):
         super().__init__(service)
@@ -107,12 +112,13 @@ class ManagerCore(EventHandler, IMessageFilter):
 
         if isinstance(evt, GroupMessage):
             if r := self.filter(evt):
-                game = r["game"]
-                game = game.strip()
+                group_id, user_id, game = evt.group_id, evt.user_id, r["game"].strip()
                 if g := self.game_graph.get(game, None):
-                    ManagerCore.games.append(g(self.bot, evt.group_id, evt.user_id))
+                    if i := ManagerCore.games.get(user_id, None):
+                        i.kill()
+                    ManagerCore.games[user_id] = g(self.bot, group_id, user_id)
                     return
-        for game in ManagerCore.games:
+        for game in [game for game in ManagerCore.games.values()]:
             await game.process_evt(evt)
 
 
@@ -120,7 +126,7 @@ class ManagerCore(EventHandler, IMessageFilter):
 class GameManager(Service):
     cores = [ManagerCore]
 
-    def close(self):
+    def shutdown(self):
         log.warning("core service could not be close")
 
 

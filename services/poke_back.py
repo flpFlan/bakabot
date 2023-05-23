@@ -1,10 +1,11 @@
 # -- stdlib --
 # -- third party --
 # -- own --
-from services.base import register_to, Service, EventHandler
+from services.base import register_service_to, Service, EventHandler
 from cqhttp.events.notice import GroupPoked
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.wrapper import timecooling
+from cqhttp.cqcode import At
 
 # -- code --
 
@@ -19,11 +20,11 @@ class PokeBackCore(EventHandler):
 
     @timecooling(2)
     async def pokeback(self, evt: GroupPoked):
-        m = f"[CQ:poke,qq={evt.user_id}]"
+        m = f"{At(evt.user_id)}"
 
-        await SendGroupMsg(evt.group_id, m).do(self.bot)
+        await SendGroupMsg(evt.group_id, m).do()
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class PokeBack(Service):
     cores = [PokeBackCore]

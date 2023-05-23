@@ -20,7 +20,7 @@ How to use
 
 2. Modify in the `Endpoints` with endpoint exactly matching your bot
 
-3. Alter other configs if nessasary
+3. Alter the [options.py](options.py) if nessasary
 
 here gives a sample:
 
@@ -147,8 +147,12 @@ servers:
         <<: *default # 引用默认中间件
 ```
 
-已有功能
+Main Functions
 ========
+
+Services
+--------
+
 - [x] 点歌
 - [x] 油库里
 - [x] B站封面获取
@@ -172,9 +176,18 @@ servers:
 - [x] [疯狂星期四文案生成](https://github.com/whitescent/KFC-Crazy-Thursday)
 - [x] 掷骰
 - [ ] 聊天
+- [x] 入群欢迎
 - [x] 复读
+
+Games
+--------
+usage: /game + name of game, for example:
+
+```
+/game Akinator
+```
+
 - [x] 俄罗斯轮盘
 - [ ] 五子棋
 - [ ] 扫雷
-- [ ] 车万角色鉴定
-- [x] 入群欢迎
+- [x] [Akinator](https://github.com/Infiniticity/akinator.py)

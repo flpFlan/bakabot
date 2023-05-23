@@ -4,10 +4,11 @@ import os
 # -- third party --
 
 # -- own --
-from services.base import register_to, Service, EventHandler
+from services.base import register_service_to, Service, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
+from cqhttp.cqcode import Image
 
 # -- code --
 
@@ -20,7 +21,7 @@ class NowdayNewsCore(EventHandler):
             return
         await self.get_everyday_news()
         path = os.path.abspath(r".\src\temp\nowday_news_temp.png")
-        await SendGroupMsg(evt.group_id, f"[CQ:image,file=file:///{path}]").do(self.bot)
+        await SendGroupMsg(evt.group_id, Image(f"file:///{path}")).do()
 
     async def get_everyday_news(self):
         url = "http://bjb.yunwj.top/php/tp/1.jpg"
@@ -30,6 +31,6 @@ class NowdayNewsCore(EventHandler):
             file.close()
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class NowdayNews(Service):
     cores = [NowdayNewsCore]

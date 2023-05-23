@@ -7,10 +7,11 @@ from urllib.request import urlopen
 # -- third party --
 
 # -- own --
-from services.base import register_to, Service, IMessageFilter, EventHandler
+from services.base import register_service_to, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
+from cqhttp.cqcode import Image
 
 # -- code --
 urllist_0 = [
@@ -34,15 +35,15 @@ class RandomArtCore(EventHandler, IMessageFilter):
             try:
                 if tag := r.get("tag", ""):
                     if url := await self.search_random(tag):
-                        m = f"[CQ:image,file={url}]"
+                        m = f"{Image(url)}"
                     else:
                         m = "没有找到相关图片Σ( ° △ °|||)"
                 else:
                     url = await self.get_random()
-                    m = f"[CQ:image,file={url}]"
+                    m = f"{Image(url)}"
             except requests.ConnectTimeout:
                 m = "请求超时(Ｔ▽Ｔ)"
-            await SendGroupMsg(evt.group_id, m).do(self.bot)
+            await SendGroupMsg(evt.group_id, m).do()
 
     async def get_random(self):
         type = random.getrandbits(1)
@@ -78,6 +79,6 @@ class RandomArtCore(EventHandler, IMessageFilter):
         return None
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class RandomArt(Service):
     cores = [RandomArtCore]

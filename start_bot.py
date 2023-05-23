@@ -3,7 +3,7 @@ import asyncio, logging
 
 # -- third party --
 # -- own --
-from config import Bots, Endpoints
+from config import _Bot_ as bot, Endpoint
 
 # -- code --
 logging.basicConfig(
@@ -15,17 +15,10 @@ logging.basicConfig(
 )
 
 
-async def start_bot():
-    loop = asyncio.get_event_loop()
-    default = "localhost:2333"
-    for bot in Bots:
-        addr = Endpoints.get(bot.name, default)
-        await bot.start_up(addr)
-        loop.create_task(bot.behavior.loop(loop))
+def start_bot():
+    asyncio.run(bot.start_up())
+    bot.run(Endpoint["event"])
 
 
 if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(start_bot())
-    loop.run_forever()
+    start_bot()

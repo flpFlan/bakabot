@@ -68,5 +68,5 @@ class BlackList(Service):
         bot.db.execute("delete from blacklist where qq_number = ?", (qq_number,))
         blacklist.remove(qq_number)
 
-    def close(self):
+    def shutdown(self):
         log.warning("core service could not be close")

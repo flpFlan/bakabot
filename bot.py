@@ -1,8 +1,9 @@
 # -- stdlib --
 import asyncio
+from collections import defaultdict
 import logging, os
 import datetime
-from typing import cast
+from typing import Type, cast
 
 # -- third party --
 
@@ -12,6 +13,7 @@ from cqhttp.base import Event
 from cqhttp.api.base import ApiAction
 from cqhttp.events.base import CQHTTPEvent
 from db.database import DataBase
+from services.base import EventHandler, Service
 
 
 # -- code --
@@ -56,83 +58,96 @@ def sort_services(services):
 
 
 class BotBehavior:
-    def __init__(self, bot):
-        self.bot = bot = cast(Bot, bot)
+    def set_bot(self, bot):
+        self.bot = cast(Bot, bot)
 
     async def process_evt(self, evt: Event):
-        bot = self.bot
-        for service in bot.services:
-            if not service.service_on:
-                continue
-            from services.base import EventHandler
+        if isinstance(evt, CQHTTPEvent):
+            ...
+        elif isinstance(evt, ApiAction):
+            ...
+        else:
+            pass
 
-            for handler in service.cores:
-                if not handler.core_on:
-                    continue
-                if not isinstance(handler, EventHandler):
-                    continue
-                if not any(
-                    [True if isinstance(evt, i) else False for i in handler.interested]
-                ):
-                    continue
-                try:
-                    await handler.handle(evt)
-                except Exception as e:
-                    if group_id := getattr(evt, "group_id", None):
-                        from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+    # async def process_evt(self, evt: Event):
+    #     for service in self.bot.services:
+    #         if not service.service_on:
+    #             continue
+    #         from services.base import EventHandler
 
-                        await SendGroupMsg(group_id, "牙白，发生了不知名的错误！").do(bot)
-                    log.error("error occurred when handling evt:%s", e)
-                    print(datetime.datetime.now, e)
-                    raise Exception(handler, evt, e)
-            if evt._.canceled:
-                return
+    #         for handler in service.cores:
+    #             if not handler.core_on:
+    #                 continue
+    #             if not isinstance(handler, EventHandler):
+    #                 continue
+    #             if not self.is_interested(evt, handler):
+    #                 continue
+    #             try:
+    #                 await handler.handle(evt)
+    #             except Exception as e:
+    #                 if group_id := getattr(evt, "group_id", None):
+    #                     from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
-    async def loop(self, loop):
-        if self.bot.is_running:
+    #                     await SendGroupMsg(group_id, "牙白，发生了不知名的错误！").do()
+    #                 log.error("error occurred when handling evt:%s", e)
+    #                 print(datetime.datetime.now, e)
+    #                 raise Exception(handler, evt, e)
+    #         if evt._.canceled:
+    #             return
+
+    @CQHTTPAdapter.Adapter.websocket("/event")
+    async def loop(self):
+        while self.bot.is_running:
             evt = await self.rev()
-            loop.create_task(self.process_evt(evt))
-        # loop.call_soon_threadsafe(asyncio.create_task, self.loop(loop))
-        loop.call_soon(asyncio.create_task, self.loop(loop))
+            _t = asyncio.create_task(self.process_evt(evt))
+        await self.bot.stop()
 
     async def rev(self) -> CQHTTPEvent:
-        bot = self.bot
-        return await bot.go.rev_evt()
+        return await self.bot._cqhttp.rev_evt()
 
     async def post_api(self, act: ApiAction):
         await self.process_evt(act)
         if act._.canceled:
             return
-        await self.bot.go.api(act)
+        await self.bot._cqhttp.api(act)
         act._callback()
+
+    @staticmethod
+    def is_interested(evt: Event, handler: EventHandler):
+        return any(True if isinstance(evt, i) else False for i in handler.interested)
 
 
 class Bot:
-    is_running = False
-    services = []
+    # public
+    services: list[Service] = []
+    handlers: dict[Type[Event], list[EventHandler]] = defaultdict(list)
+
+    # private
+    _behavior = BotBehavior()
+    _db = DataBase()
+    _cqhttp = CQHTTPAdapter()
 
     def __init__(self, name: str, qq_number: int):
         self.name = name
         self.qq_number = qq_number
-        self.behavior = BotBehavior(self)
-        self.go = CQHTTPAdapter(self)
-        self.db = DataBase(self)
+        self._behavior.set_bot(self)
+        self._db.set_bot(self)
+        self.is_running = False
 
-    async def start_up(self, endpoint):
+    def run(self, endpoint: str):
+        host, port = endpoint.split(":")
+        self._cqhttp.run(host, int(port))
+
+    async def start_up(self):
         if self.is_running:
             log.warning("already start up!")
             return
 
-        # init backend
-        go = self.go
-        await go.connect("ws://" + endpoint)
-
         # init database
         if not os.path.exists("src/db"):
             os.makedirs("src/db")
-        db = self.db
-        name = self.name
-        await db.connect("src/db/%s.db" % name)
+        db = self._db
+        await db.connect("src/db/%s.db" % self.name)
         db.execute(
             "create table if not exists services (service text primary key,service_on bool)"
         )
@@ -156,21 +171,32 @@ class Bot:
             )
             state = db.fatchone()
             if state[0]:
-                await s.start()
+                await s.start_up()
+
+        # init handlers
+        from cqhttp.events.base import all_events
+
+        for evt in all_events:
+            for s in self.services:
+                for h in s.behavior:
+                    if not isinstance(h, EventHandler):
+                        return
+                    if any(issubclass(evt, e) for e in h.interested):
+                        self.handlers[evt].append(h)
 
         # init src
         if not os.path.exists("src/temp"):
             os.makedirs("src/temp")
 
         self.is_running = True
-        print("%s start up!" % name)
+        print("%s start up!" % self.name)
 
     async def stop(self):
         if not self.is_running:
             log.warning("already closed")
             return
 
-        await self.go.disconnect()
-        await self.db.close()
+        await self._cqhttp.shutdown()
+        await self._db.close()
         self.is_running = False
         print("%s closed!" % self.name)

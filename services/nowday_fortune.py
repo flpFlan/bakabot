@@ -7,9 +7,10 @@ from typing import cast
 from numpy.random import normal
 
 # -- own --
-from services.base import register_to, Service, EventHandler, SheduledHandler
+from services.base import register_service_to, Service, EventHandler, SheduledHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+from cqhttp.cqcode import At, Image
 
 # -- code --
 exp = {"大吉": 96, "中吉": 80, "小吉": 64, "小凶": 48, "中凶": 32, "大凶": 16, "baka": 999}
@@ -25,31 +26,31 @@ class NowdayFortuneCore(EventHandler):
         qq_number = evt.user_id
 
         if qq_number in service.fortune_graph:
-            m = f'[CQ:at,qq={qq_number}]\n命运的轨迹在一次日月轮换之内只能窥探一次，请明天再来吧(/"≡ _ ≡)='
-            await SendGroupMsg(evt.group_id, m).do(self.bot)
+            m = f'{At(qq_number)}\n命运的轨迹在一次日月轮换之内只能窥探一次，请明天再来吧(/"≡ _ ≡)='
+            await SendGroupMsg(evt.group_id, m).do()
             return
 
         if random.getrandbits == 0:  # bonus
             m = "今日运势\nbakabakabakabaka，bakabaka，bakabakabakabakabakabaka，baka！(｀∀´)Ψ "
-            await SendGroupMsg(evt.group_id, m).do(self.bot)
+            await SendGroupMsg(evt.group_id, m).do()
             return
 
         if random.getrandbits == 0:  # another bonus
             service.add(qq_number, "baka", 999, 999, 999)
             m = "今日运…∑(°口°๑)❢❢少年，你的命我看不透啊…莫非你就是传说中的主角？去开拓属于自己的命运吧！我命由我不由天(｡ì _ í｡)"
-            await SendGroupMsg(evt.group_id, m).do(self.bot)
+            await SendGroupMsg(evt.group_id, m).do()
             return
 
         fortune = random.choice(["大吉", "中吉", "小吉", "小凶", "中凶", "大凶"])
-        money = int(normal(exp[fortune]))
-        love = int(normal(exp[fortune]))
-        work = int(normal(exp[fortune]))
+        money = int(normal(exp[fortune], 20))
+        love = int(normal(exp[fortune], 20))
+        work = int(normal(exp[fortune], 20))
         service.add(qq_number, fortune, money, love, work)
 
         path = os.path.abspath(f"src/fortune/{fortune}.png")
-        m = f"[CQ:at,qq={qq_number}]\n运势：{fortune}\n爱情运：{love}\n财运：{money}\n事业运：{work}[CQ:image,file=file:///{path}]"
+        m = f"{At(qq_number)}\n运势：{fortune}\n爱情运：{love}\n财运：{money}\n事业运：{work}{Image(f'file:///{path}')}"
 
-        await SendGroupMsg(evt.group_id, m).do(self.bot)
+        await SendGroupMsg(evt.group_id, m).do()
 
 
 class RefreshFortune(SheduledHandler):
@@ -61,12 +62,12 @@ class RefreshFortune(SheduledHandler):
         service.clear()
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class NowdayFortune(Service):
     cores = [NowdayFortuneCore, RefreshFortune]
 
-    async def start(self):
-        await super().start()
+    async def start_up(self):
+        await super().start_up()
         bot = self.bot
         bot.db.execute(
             "create table if not exists "

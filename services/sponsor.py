@@ -4,9 +4,10 @@ import requests
 
 # -- third party --
 # -- own --
-from services.base import IMessageFilter, register_to, Service, EventHandler
+from services.base import IMessageFilter, register_service_to, Service, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+from cqhttp.cqcode import Image
 
 # -- code --
 
@@ -23,15 +24,15 @@ class SponsorCore(EventHandler):
 Buy me a coffee :)
 
 >>>微信
-[CQ:image,file=file:///{webchat}]
+{Image(f'file:///{webchat}')}
 
 >>>支付宝
-[CQ:image,file=file:///{alipay}]
+{Image(f'file:///{alipay}')}
 """.strip()
 
-        await SendGroupMsg(evt.group_id, m).do(self.bot)
+        await SendGroupMsg(evt.group_id, m).do()
 
 
-@register_to("BAKA")
+@register_service_to("BAKA")
 class Sponsor(Service):
     cores = [SponsorCore]

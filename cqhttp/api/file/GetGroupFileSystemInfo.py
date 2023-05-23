@@ -1,27 +1,22 @@
 """获取群文件系统信息"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass,field
+from typing import TypedDict
+from cqhttp.api.base import ApiAction, ResponseBase
 
+class Data(TypedDict):
+    file_count: int
+    limit_count: int
+    used_space: int
+    total_space: int
 
 class Response(ResponseBase):
-    class Data:
-        file_count: int
-        limit_count: int
-        used_space: int
-        total_space: int
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class GetGroupFileSystemInfo(ApiAction[Response]):
     """获取群文件系统信息"""
 
-    action = "get_group_file_system_info"
-    response: Response
-
-    def __init__(self, group_id: int, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = Response()
-        self.group_id = group_id
-        self.echo = echo
+    action:str = field(init=False,default="get_group_file_system_info")
+    group_id: int

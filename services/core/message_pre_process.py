@@ -25,5 +25,5 @@ class MessagePreProcess(Service):
     priority = -1
     cores = [Process]
 
-    async def close(self):
+    async def shutdown(self):
         pass

@@ -1,16 +1,12 @@
 """标记消息已读"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from cqhttp.api.base import ApiAction,  ResponseBase
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class MarkMsgAsRead(ApiAction[ResponseBase]):
     """标记消息已读"""
 
-    action = "mark_msg_as_read"
-
-    def __init__(self, message_id: int, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = ResponseBase()
-        self.message_id = message_id
-        self.echo = echo
+    action:str = field(init=False,default="mark_msg_as_read")
+    message_id: int

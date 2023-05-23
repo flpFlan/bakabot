@@ -1,24 +1,19 @@
 """获取在线机型"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from typing import Optional, TypedDict
+from cqhttp.api.base import ApiAction, ResponseBase
 
+class Data(TypedDict):
+    variants: list
 
 class Response(ResponseBase):
-    class Data:
-        variants: list
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class GetModelShow(ApiAction[Response]):
     """获取在线机型"""
 
-    action = "_get_model_show"
-    response: Response
-
-    def __init__(self, model: str, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = Response()
-        self.model = model
-        self.echo = echo
+    action:str = field(init=False,default="_get_model_show")
+    model: str

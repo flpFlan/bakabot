@@ -3,7 +3,7 @@ from re import RegexFlag
 
 # -- third party --
 # -- own --
-from services.base import register_to, Service, IMessageFilter, EventHandler
+from services.base import register_service_to, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.wrapper import timecooling
@@ -27,11 +27,11 @@ class BakaResponseCore(EventHandler, IMessageFilter):
     async def response(self, r, group_id):
         bot = self.bot
         if word := r.get("word", None):
-            await SendGroupMsg(group_id=group_id, message="不是%s!" % word).do(bot)
+            await SendGroupMsg(group_id=group_id, message="不是%s!" % word).do()
         elif r.get("word2", None):
-            await SendGroupMsg(group_id=group_id, message="我不笨!").do(bot)
+            await SendGroupMsg(group_id=group_id, message="我不笨!").do()
 
 
-@register_to("ALL")
+@register_service_to("ALL")
 class BakaResponse(Service):
     cores = [BakaResponseCore]

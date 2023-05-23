@@ -45,20 +45,18 @@ class CommandCore(EventHandler, IMessageFilter):
 
                 def sgm(msg, group_id=evt.group_id):
                     asyncio.ensure_future(
-                        SendGroupMsg(group_id=group_id, message=msg).do(bot)
+                        SendGroupMsg(group_id=group_id, message=msg).do()
                     )
 
                 def segm(msg, interval):
                     from services.core.whitelist import whitelist
 
-                    SendGroupMsg.many(whitelist, msg).do(bot, interval)
+                    SendGroupMsg.many(whitelist, msg).do(interval)
 
             if isinstance(evt, PrivateMessage):
 
                 def spm(msg, qq_number=evt.sender.user_id):
-                    asyncio.ensure_future(
-                        SendMsg(user_id=qq_number, message=msg).do(bot)
-                    )
+                    asyncio.ensure_future(SendMsg(user_id=qq_number, message=msg).do())
 
             cmd_raw = r["cmd"]
             try:
@@ -69,7 +67,7 @@ class CommandCore(EventHandler, IMessageFilter):
             except Exception as e:
                 log.error("error while excute command:\n%s", e)
                 if isinstance(evt, GroupMessage):
-                    await SendMsg(group_id=evt.group_id, message=str(e)).do(bot)
+                    await SendMsg(group_id=evt.group_id, message=str(e)).do()
 
     async def close(self):
         log.warning("Command must be on")

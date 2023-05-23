@@ -1,8 +1,9 @@
 """获取群根目录文件列表"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from typing import Optional, TypedDict
+from cqhttp.api.base import ApiAction,  ResponseBase
 
-
+@dataclass
 class File:
     group_id: int
     file_id: str
@@ -16,7 +17,7 @@ class File:
     uploader: int
     uploader_name: str
 
-
+@dataclass
 class Folder:
     group_id: int
     folder_id: str
@@ -26,24 +27,18 @@ class Folder:
     creator_name: str
     total_file_count: int
 
-
+class Data(TypedDict):
+    files: list[File]
+    folders: list[Folder]
+    
 class Response(ResponseBase):
-    class Data:
-        files: list[File]
-        folders: list[Folder]
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class GetGroupRootFiles(ApiAction[Response]):
     """获取群根目录文件列表"""
 
-    action = "get_group_root_files"
-    response: Response
-
-    def __init__(self, group_id: int, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = Response()
-        self.group_id = group_id
-        self.echo = echo
+    action:str = field(init=False,default="get_group_root_files")
+    group_id: int

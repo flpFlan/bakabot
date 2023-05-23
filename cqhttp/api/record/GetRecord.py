@@ -1,25 +1,20 @@
 """获取语音"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from typing import TypedDict
+from cqhttp.api.base import ApiAction, ResponseBase
 
+class Data(TypedDict):
+    file: str
 
 class Response(ResponseBase):
-    class Data:
-        file: str
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class GetRecord(ApiAction[Response]):
     """获取语音"""
 
-    action = "get_record"
-    response: Response
-
-    def __init__(self, file: str, out_format: str, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = Response()
-        self.file = file
-        self.out_format = out_format
-        self.echo = echo
+    action:str = field(init=False,default="get_record")
+    file: str
+    out_format: str

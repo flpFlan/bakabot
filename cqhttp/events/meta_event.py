@@ -1,72 +1,63 @@
 from cqhttp.events.base import CQHTTPEvent
-from cqhttp.events.base import register_to_events
+from dataclasses import dataclass,field
 
 
+@dataclass
 class MetaEvent(CQHTTPEvent):
-    post_type = "meta_event"
-    meta_event_type: str
+    post_type:str = "meta_event"
 
-    def __init__(self):
-        super().__init__()
+    meta_event_type: str = field(kw_only=True)
 
 
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class HeartBeatBag(MetaEvent):
+    @dataclass
     class Status:
+        @dataclass
         class StatusStatistics:
-            PacketReceived: int
-            PacketSent: int
-            PacketLost: int
-            MessageReceived: int
-            MessageSent: int
-            DisconnectTimes: int
-            LostTimes: int
-            LastMessageTime: int
+            PacketReceived: int = field(kw_only=True)
+            PacketSent: int = field(kw_only=True)
+            PacketLost: int = field(kw_only=True)
+            MessageReceived: int = field(kw_only=True)
+            MessageSent: int = field(kw_only=True)
+            DisconnectTimes: int = field(kw_only=True)
+            LostTimes: int = field(kw_only=True)
+            LastMessageTime: int = field(kw_only=True)
 
-        app_initialized: bool
-        app_enabled: bool
-        plugins_good: bool
-        app_good: bool
-        online: bool
-        stat: StatusStatistics
+        app_initialized: bool = field(kw_only=True)
+        app_enabled: bool = field(kw_only=True)
+        plugins_good: bool = field(kw_only=True)
+        app_good: bool = field(kw_only=True)
+        online: bool = field(kw_only=True)
+        stat: StatusStatistics = field(kw_only=True)
 
-    meta_event_type: str = "heartbeat"
+    meta_event_type: str  = "heartbeat"
 
-    status: Status
-    interval: int
-
-    def __init__(self):
-        super().__init__()
+    status: Status = field(kw_only=True)
+    interval: int = field(kw_only=True)
 
 
+@dataclass
 class LifeCycle(MetaEvent):
-    meta_event_type = "lifecycle"
+    meta_event_type:str = "lifecycle"
 
-    sub_type: str
-
-    def __init__(self):
-        super().__init__()
+    sub_type: str = field(kw_only=True)
 
 
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class LifeCycleEnabled(LifeCycle):
-    sub_type = "enable"
-
-    def __init__(self):
-        super().__init__()
+    sub_type:str = "enable"
 
 
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class LifeCycleDisabled(LifeCycle):
-    sub_type = "disable"
-
-    def __init__(self):
-        super().__init__()
+    sub_type:str = "disable"
 
 
-@register_to_events
+@CQHTTPEvent.register
+@dataclass
 class LifeCycleConnected(LifeCycle):
-    sub_type = "connect"
-
-    def __init__(self):
-        super().__init__()
+    sub_type:str = "connect"
