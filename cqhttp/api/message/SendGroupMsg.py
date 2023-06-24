@@ -4,11 +4,13 @@ from dataclasses import dataclass, field
 import threading
 import time
 from typing import Optional, TypedDict
-from cqhttp.api.base import ApiAction,  ResponseBase
+from cqhttp.api.base import ApiAction, ResponseBase
 from cqhttp.cqcode.base import CQCode
+
 
 class Data(TypedDict):
     message_id: int
+
 
 class Response(ResponseBase):
     data: Data
@@ -19,9 +21,9 @@ class Response(ResponseBase):
 class SendGroupMsg(ApiAction[Response]):
     """发送群聊消息"""
 
-    action:str = field(init=False,default="send_group_msg")
+    action: str = field(init=False, default="send_group_msg")
     group_id: int
-    message: str |bool| CQCode
+    message: str | bool | CQCode
     auto_escape: bool = False
 
     @staticmethod
@@ -49,7 +51,7 @@ class SendManyGroupMsg:
         self.auto_escape = auto_escape
         self.echo = echo
 
-    def do(self, interval=3):
+    def forget(self, interval=3):
         def target():
             group_list = self.group_list
             message = self.message

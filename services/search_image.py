@@ -6,7 +6,7 @@ import requests
 # -- third party --
 
 # -- own --
-from services.base import Service.register, Service, IMessageFilter, EventHandler
+from services.base import Service, ServiceBehavior, OnEvent, IMessageFilter
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -15,10 +15,14 @@ from cqhttp.cqcode import Image
 # -- code --
 
 
-class SearchImageCore(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
+class SearchImage(Service):
+    pass
+
+
+class SearchImageCore(ServiceBehavior[SearchImage], IMessageFilter):
     entrys = [r"^搜图\s*(?P<tag>.*)"]
 
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
@@ -42,8 +46,3 @@ class SearchImageCore(EventHandler, IMessageFilter):
             for i in Request.Sync.get_iter_content(url):
                 file.write(i)
             file.close()
-
-
-@Service.register("ALL")
-class SearchImage(Service):
-    cores = [SearchImageCore]

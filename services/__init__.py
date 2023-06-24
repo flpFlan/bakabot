@@ -21,7 +21,7 @@ from .nowday_news import NowdayNews
 from .nowday_fortune import NowdayFortune
 from .nowday_cp import NowdayCP
 from .welcome_newcomer import WelcomeNewcomer
-from .on_new_friend_group import OnNewFriendGroup
+from .on_friend_group import OnFriendGroup
 from .choose_or import ChooseOr
 from .barber_shop import BarberShop
 from .kfy import KFC

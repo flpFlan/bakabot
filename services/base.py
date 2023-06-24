@@ -1,37 +1,20 @@
 # -- stdlib --
 import asyncio
 from asyncio import Queue
-from collections import defaultdict
-from enum import Enum
 import inspect
 import logging
-from logging import handlers
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-    ClassVar,
-    Coroutine,
-    DefaultDict,
-    Generic,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    cast,
-    get_args,
-    get_type_hints,
-    overload,
-)
 from re import compile
-import typing
+from collections import defaultdict
+from typing import Callable, ClassVar, Coroutine, Generic, Optional
+from typing import Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, cast, get_args, overload, DefaultDict
+
 
 # -- third party --
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # -- own --
 from accio import ACCIO
 from cqhttp.api.base import ApiAction, ResponseBase
-from cqhttp.base import Event
 from cqhttp.events.base import CQHTTPEvent
 from services.base import ServiceBehavior
 
@@ -191,6 +174,15 @@ class ServiceBehavior(Generic[_TService]):
         else:
             raise TypeError("WTF?!")
 
+    async def __setup(self):
+        ...
+
+    @classmethod
+    async def create_instance(cls, service: _TService):
+        self = cls(service)
+        await self.__setup()
+        return self
+
 
 _TCQHTTPEvent = TypeVar("_TCQHTTPEvent", bound=CQHTTPEvent)
 _TApiAction = TypeVar("_TApiAction", bound=ApiAction)
@@ -223,6 +215,9 @@ class CQHTTPEventHub(EventHub, Generic[_TCQHTTPEvent]):
         return f
 
 
+_TApiActionT = TypeVar("_TApiActionT", bound=ApiAction)
+
+
 class ApiActionHub(EventHub, Generic[_TApiAction]):
     _type: Tuple[_TApiAction, ...]
 
@@ -230,10 +225,10 @@ class ApiActionHub(EventHub, Generic[_TApiAction]):
         cls._type = item
         return cls
 
-    class BeforePost:
+    class _BeforePost(Generic[_TApiActionT]):
         @staticmethod
         def add_listener(
-            f: Callable[[_TServiceBehavior, _TApiAction], Coroutine[None, None, None]]
+            f: Callable[[_TServiceBehavior, _TApiActionT], Coroutine[None, None, None]]
         ):
             attr_old = getattr(f, "evt_entry_point", ())
             attr_new: set[Type[ApiAction]] = set(*ApiActionHub._type, *attr_old)  # type: ignore
@@ -244,11 +239,11 @@ class ApiActionHub(EventHub, Generic[_TApiAction]):
             setattr(f, "evt_entry_point", tuple(real_types))
             return f
 
-    class AfterPost:
+    class _AfterPost(Generic[_TApiActionT]):
         @staticmethod
         def add_listener(
             f: Callable[
-                [_TServiceBehavior, _TApiAction, _TResponse],
+                [_TServiceBehavior, _TApiActionT, _TResponse],
                 Coroutine[None, None, None],
             ]
         ):
@@ -260,6 +255,14 @@ class ApiActionHub(EventHub, Generic[_TApiAction]):
                     real_types.add(e)
             setattr(f, "evt_entry_point", tuple(real_types))
             return f
+
+    @staticmethod
+    def before_post():
+        return ApiActionHub._BeforePost[_TApiAction]
+
+    @staticmethod
+    def after_post():
+        return ApiActionHub._AfterPost[_TApiAction]
 
 
 class _META(type):
@@ -300,37 +303,6 @@ class _META(type):
 
 class OnEvent(metaclass=_META):
     pass
-
-
-class Sheduled:
-    class Interval:
-        ...
-
-    class Cron:
-        ...
-
-
-# class SheduledHandler(ServiceBehavior):
-#     shedule_trigger: str
-#     args: dict
-
-#     def run(self):
-#         super().run()
-#         self.jobs = jobs = []
-#         self.scheduler = scheduler = AsyncIOScheduler()
-#         if self.shedule_trigger == "interval":
-#             jobs.append(scheduler.add_job(self.handle, "interval", **self.args))
-#         if self.shedule_trigger == "cron":
-#             jobs.append(scheduler.add_job(self.handle, "cron", **self.args))
-#         scheduler.start()
-
-#     def close(self):
-#         super().close()
-#         self.scheduler.remove_all_jobs()
-#         self.jobs = []
-
-#     async def handle(self):
-#         ...
 
 
 class IMessageFilter:

@@ -7,7 +7,7 @@ from Crypto.Cipher import AES
 import fake_useragent
 
 # -- own --
-from services.base import Service.register, Service, IMessageFilter, EventHandler
+from services.base import OnEvent, Service, ServiceBehavior, IMessageFilter
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.cqcode import Music
@@ -61,12 +61,14 @@ class Encrypyed:
         return data
 
 
-class SearchSongCore(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
+class SearchSong(Service):
+    pass
+
+
+class SearchSongCore(ServiceBehavior[SearchSong], IMessageFilter):
     entrys = [r"^点歌(?P<song>.+)$"]
 
-    def __init__(self, service):
-        super().__init__(service)
+    async def __setup(self):
         headers = {
             "User-Agent": fake_useragent.UserAgent().random,
             "Host": "music.163.com",
@@ -77,9 +79,9 @@ class SearchSongCore(EventHandler, IMessageFilter):
         self.session.headers = headers
         self.ep = Encrypyed()
 
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if r := self.filter(evt):
-            bot = self.bot
             song = r["song"]
             id = await self.search_song(song)
             if id is None:
@@ -119,8 +121,3 @@ class SearchSongCore(EventHandler, IMessageFilter):
             for song in songs:
                 song_id = song["id"]
                 return song_id
-
-
-@Service.register("ALL")
-class SearchSong(Service):
-    cores = [SearchSongCore]

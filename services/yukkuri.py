@@ -5,7 +5,7 @@ from urllib.parse import quote
 
 # -- third party --
 # -- own --
-from services.base import Service.register, Service, IMessageFilter, EventHandler
+from services.base import Service, ServiceBehavior, IMessageFilter, OnEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -24,13 +24,16 @@ TYPE = {
 }
 
 
-class YukkuriCore(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
+class Yukkuri(Service):
+    pass
+
+
+class YukkuriCore(ServiceBehavior[Yukkuri], IMessageFilter):
     entrys = [r"^油库里(?P<type>[1-8])?(?P<content>.+)"]
 
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if r := self.filter(evt):
-            bot = self.bot
             group_id = evt.group_id
 
             type = r.get("type") or "f1"
@@ -79,8 +82,3 @@ class YukkuriCore(EventHandler, IMessageFilter):
         for i in result:
             final_result += i
         return final_result
-
-
-@Service.register("ALL")
-class Yukkuri(Service):
-    cores = [YukkuriCore]

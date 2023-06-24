@@ -1,8 +1,6 @@
 # -- stdlib --
-import asyncio
 import json
 import logging
-from threading import Thread
 import time
 from typing import cast
 
@@ -10,15 +8,9 @@ from typing import cast
 import redis
 
 # -- own --
-from services.base import (
-    Service.register,
-    Service,
-    ServiceBehavior,
-    EventHandler,
-    IMessageFilter,
-)
+from services.base import Service, ServiceBehavior
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
-from cqhttp.events.message import GroupMessage
+from accio import ACCIO
 
 
 # -- code --
@@ -38,13 +30,41 @@ ServerNames = {
 }
 
 
+class THBMessageNotify(Service):
+    async def __setup(self):
+        ACCIO.db.execute(
+            "create table if not exists thb_notify_groups (group_id integer unique)"
+        )
+        global thb_notify_groups
+        self.thb_notify_groups = thb_notify_groups = self.get_notify_group()
+
+    def get_notify_group(self) -> set[int]:
+        ACCIO.db.execute("select group_id from thb_notify_groups")
+        result = ACCIO.db.fatchall()
+        return set(group[0] for group in result)
+
+    def add_notify_group(self, group_id: int):
+        if group_id in self.thb_notify_groups:
+            return
+
+        ACCIO.db.execute(
+            f"insert into thb_notify_groups (group_id) values (?)",
+            (group_id,),
+        )
+        self.thb_notify_groups.add(group_id)
+
+    def del_notify_group(self, group_id: int):
+        if group_id not in self.thb_notify_groups:
+            return
+        ACCIO.db.execute(
+            "delete from thb_notify_groups where group_id = ?", (group_id,)
+        )
+        self.thb_notify_groups.remove(group_id)
+
+
+# TODO
 class THBMessageNotifyCore(ServiceBehavior):
-    shedule_trigger = "interval"
-    args = {"seconds": 1}
-
-    def run(self):
-        super().run()
-
+    async def __setup(self):
         self.sub = sub = redis.from_url(URL).pubsub()
         sub.psubscribe("thb.*")
 
@@ -95,73 +115,8 @@ class THBMessageNotifyCore(ServiceBehavior):
             content,
         )
         service = cast(THBMessageNotify, self.service)
-        bot = self.bot
-        SendGroupMsg.many(service.thb_notify_groups, send).do(interval=1)
+        SendGroupMsg.many(service.thb_notify_groups, send).forget(interval=1)
 
     def close(self):
         super().close()
         self.flag = True
-
-
-class NotifyGroupManager(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
-    entrys = [r"^/thb_message (?P<action>on|off)$"]
-
-    async def handle(self, evt: GroupMessage):
-        from config import Administrators
-
-        if evt.user_id not in Administrators:
-            return
-        if r := self.filter(evt):
-            action = r.get("action", None)
-            bot = self.bot
-            service = cast(THBMessageNotify, self.service)
-            group_id = evt.group_id
-            if action == "on":
-                service.add_notify_group(group_id)
-                await SendGroupMsg(group_id, "THBMessageNotify已启用").do()
-            if action == "off":
-                service.del_notify_group(group_id)
-                await SendGroupMsg(group_id, "THBMessageNotify已关闭").do()
-
-
-@Service.register("Aya")
-class THBMessageNotify(Service):
-    cores = [NotifyGroupManager, THBMessageNotifyCore]
-
-    async def start_up(self):
-        await super().start_up()
-        from bot import Bot
-
-        bot = cast(Bot, self.bot)
-        bot.db.execute(
-            "create table if not exists thb_notify_groups (group_id integer unique)"
-        )
-        global thb_notify_groups
-        self.thb_notify_groups = thb_notify_groups = self.get_notify_group()
-
-    def get_notify_group(self) -> set[int]:
-        bot = self.bot
-        db = bot.db
-        db.execute("select group_id from thb_notify_groups")
-        result = db.fatchall()
-        return set(group[0] for group in result)
-
-    def add_notify_group(self, group_id: int):
-        if group_id in self.thb_notify_groups:
-            return
-        bot = self.bot
-        db = bot.db
-
-        db.execute(
-            f"insert into thb_notify_groups (group_id) values (?)",
-            (group_id,),
-        )
-        self.thb_notify_groups.add(group_id)
-
-    def del_notify_group(self, group_id: int):
-        if group_id not in self.thb_notify_groups:
-            return
-        bot = self.bot
-        bot.db.execute("delete from thb_notify_groups where group_id = ?", (group_id,))
-        self.thb_notify_groups.remove(group_id)

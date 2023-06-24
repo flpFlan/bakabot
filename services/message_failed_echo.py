@@ -1,12 +1,9 @@
 # -- stdlib --
-import asyncio
-import time
-
 # -- third party --
 # -- own --
 from services.base import Service, ServiceBehavior, OnEvent
-from cqhttp.api.message.SendGroupMsg import SendGroupMsg, Response as R2
-from cqhttp.api.message.SendMsg import SendMsg, Response as R1
+from cqhttp.api.message.SendGroupMsg import SendGroupMsg, Response as R1
+from cqhttp.api.message.SendMsg import SendMsg, Response as R2
 
 # -- code --
 
@@ -16,7 +13,7 @@ class MessageFailedEcho(Service):
 
 
 class MessageFailedEchoCore(ServiceBehavior[MessageFailedEcho]):
-    @OnEvent[SendGroupMsg, SendMsg].AfterPost.add_listener
+    @OnEvent[SendGroupMsg, SendMsg].after_post().add_listener
     async def handle(self, evt: SendGroupMsg | SendMsg, args: R1 | R2):
         if isinstance(evt, SendMsg):
             if not getattr(evt, "group_id", None):

@@ -23,9 +23,9 @@ class CQHTTPAdapter:
 
     def __init__(self):
         self.endpoint = ACCIO.conf.get("Bot.Adapter", "endpoint")
-        self.client= ClientSession()
+        self.client = ClientSession()
 
-    def run_at(self, host:str, port=2333):
+    def run_at(self, host: str, port=2333):
         self.Adapter.run(host, port)
 
     async def shutdown(self):
@@ -54,7 +54,7 @@ class CQHTTPAdapter:
         if echo:
             form["echo"] = echo
 
-        result= await self.client.post(self.endpoint,json=form)
+        result = await self.client.post(self.endpoint, json=form)
         return await result.json()
 
     @staticmethod
@@ -124,43 +124,3 @@ def set_attr(obj, attrs: dict):
 
         else:
             setattr(obj, name, value)
-
-
-# TODO
-# async def _callback(x):
-#     bot = x.args[0].bot
-#     await bot.stop()
-#     log.error("max retry reached, %sshootdown", bot.name)
-#     raise Exception("Max Retry Reached")
-
-
-# class P_CQHTTPAdapter(CQHTTPAdapter):
-#     def __init__(self):
-#         super().__init__()
-#         import requests
-
-#         self.session = requests.Session()
-
-#     @retry(
-#         wait=wait_fixed(1),
-#         stop=stop_after_attempt(MAX_CONNECT_RETRIES),
-#         retry_error_callback=lambda x: asyncio.run(_callback(x)),
-#     )
-#     async def connect(self, evt_uri: str, api_uri: str):
-#         self.evt_connection = await connect(
-#             urljoin(evt_uri, "/event"), ping_interval=None
-#         )
-#         self.api_uri = api_uri
-
-#     async def _api(self, action: str, echo="", **params) -> dict:
-#         form = {}
-#         form["action"] = action
-#         if params:
-#             form["params"] = dict(**params)
-#         if echo:
-#             form["echo"] = echo
-
-#         data = json.dumps(form)
-#         r = self.session.post(self.api_uri, json=data)
-#         r.raise_for_status()
-#         return r.json()

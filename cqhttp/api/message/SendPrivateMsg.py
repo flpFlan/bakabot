@@ -7,8 +7,10 @@ from typing import Optional, TypedDict
 from cqhttp.api.base import ApiAction, ResponseBase
 from cqhttp.cqcode.base import CQCode
 
+
 class Data(TypedDict):
     message_id: int
+
 
 class Response(ResponseBase):
     data: Data
@@ -19,9 +21,9 @@ class Response(ResponseBase):
 class SendPrivateMsg(ApiAction[Response]):
     """发送私聊消息"""
 
-    action:str = field(init=False,default="send_private_msg")
+    action: str = field(init=False, default="send_private_msg")
     user_id: int
-    message: str| bool | CQCode
+    message: str | bool | CQCode
     group_id: Optional[int] = None
     auto_escape: bool = False
 
@@ -50,7 +52,7 @@ class SendManyPrivateMsg:
         self.auto_escape = auto_escape
         self.echo = echo
 
-    def do(self, interval=3):
+    def forget(self, interval=3):
         def target():
             target_list = self.target_list
             message = self.message

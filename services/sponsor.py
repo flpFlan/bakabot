@@ -4,7 +4,7 @@ import requests
 
 # -- third party --
 # -- own --
-from services.base import IMessageFilter, Service.register, Service, EventHandler
+from services.base import Service, ServiceBehavior, OnEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.cqcode import Image
@@ -12,9 +12,12 @@ from cqhttp.cqcode import Image
 # -- code --
 
 
-class SponsorCore(EventHandler):
-    interested = [GroupMessage]
+class Sponsor(Service):
+    pass
 
+
+class SponsorCore(ServiceBehavior[Sponsor]):
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if not evt.message == "赞助":
             return
@@ -31,8 +34,3 @@ Buy me a coffee :)
 """.strip()
 
         await SendGroupMsg(evt.group_id, m).do()
-
-
-@Service.register("BAKA")
-class Sponsor(Service):
-    cores = [SponsorCore]

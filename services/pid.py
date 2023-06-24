@@ -7,7 +7,7 @@ import requests
 import aiohttp
 
 # -- own --
-from services.base import IMessageFilter, Service.register, Service, EventHandler
+from services.base import Service, ServiceBehavior, OnEvent, IMessageFilter
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -17,10 +17,15 @@ from cqhttp.cqcode import Image
 # -- code --
 
 
-class PidCore(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
+class Pid(Service):
+    pass
+
+
+# TODO
+class PidCore(ServiceBehavior[Pid], IMessageFilter):
     entrys = [r"^pid\s*(?P<pid>\d+(?:-\d+)?)$"]
 
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
@@ -67,8 +72,3 @@ class PidCore(EventHandler, IMessageFilter):
                 file.write(i)
             file.close()
         return urljoin(PID_URL, f"{pid}.{format}")
-
-
-@Service.register("ALL")
-class Pid(Service):
-    cores = [PidCore]

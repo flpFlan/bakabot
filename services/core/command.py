@@ -51,7 +51,7 @@ class CommandCore(EventHub, IMessageFilter):
                 def segm(msg, interval):
                     from services.core.whitelist import whitelist
 
-                    SendGroupMsg.many(whitelist, msg).do(interval)
+                    SendGroupMsg.many(whitelist, msg).forget(interval)
 
             if isinstance(evt, PrivateMessage):
 

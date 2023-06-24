@@ -1,4 +1,5 @@
 # -- stdlib --
+from ast import Pass
 import json
 import random
 import requests
@@ -7,7 +8,7 @@ from urllib.request import urlopen
 # -- third party --
 
 # -- own --
-from services.base import Service.register, Service, IMessageFilter, EventHandler
+from services.base import OnEvent, Service, ServiceBehavior, IMessageFilter
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -26,10 +27,14 @@ urllist_1 = [
 ]
 
 
-class RandomArtCore(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
+class RandomArt(Service):
+    pass
+
+
+class RandomArtCore(ServiceBehavior[RandomArt], IMessageFilter):
     entrys = [r"^随机图片\s*(?P<tag>.+)?"]
 
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if r := self.filter(evt):
             try:
@@ -45,7 +50,7 @@ class RandomArtCore(EventHandler, IMessageFilter):
                 m = "请求超时(Ｔ▽Ｔ)"
             await SendGroupMsg(evt.group_id, m).do()
 
-    async def get_random(self):
+    async def get_random(self) -> str:
         type = random.getrandbits(1)
         if type == 0:
             key = ["img", "imgurl"]
@@ -77,8 +82,3 @@ class RandomArtCore(EventHandler, IMessageFilter):
                 return i["photo"]["path"].replace(".gif_jpeg", ".gif")
             return None
         return None
-
-
-@Service.register("ALL")
-class RandomArt(Service):
-    cores = [RandomArtCore]

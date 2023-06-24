@@ -3,17 +3,21 @@
 import random
 
 # -- own --
-from services.base import Service.register, Service, EventHandler, IMessageFilter
+from services.base import Service, ServiceBehavior, IMessageFilter, OnEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
 # -- code --
 
 
-class RollCore(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
+class Roll(Service):
+    pass
+
+
+class RollCore(ServiceBehavior[Roll], IMessageFilter):
     entrys = [r"^\.r\s*(?P<args>\d{,4}(?:d\d{,4})?(?:\s*\+\s*\d{,4}(?:d\d{,4})?)*)\s*$"]
 
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
@@ -27,7 +31,7 @@ class RollCore(EventHandler, IMessageFilter):
                 result += int(arg)
                 exps.append(arg)
             else:
-                c, l = arg.split("d")
+                c, l = (arg or "d").split("d")
                 c = c or 1
                 l = l or 100
                 c, l = int(c), int(l)
@@ -36,8 +40,3 @@ class RollCore(EventHandler, IMessageFilter):
         m = f"[{evt.sender.card or evt.sender.nickname}]掷骰:{'+'.join(exps)}={result}"
 
         await SendGroupMsg(evt.group_id, m).do()
-
-
-@Service.register("ALL")
-class Roll(Service):
-    cores = [RollCore]

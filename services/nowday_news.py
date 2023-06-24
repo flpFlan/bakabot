@@ -4,7 +4,7 @@ import os
 # -- third party --
 
 # -- own --
-from services.base import Service.register, Service, EventHandler
+from services.base import Service, ServiceBehavior, OnEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -13,9 +13,12 @@ from cqhttp.cqcode import Image
 # -- code --
 
 
-class NowdayNewsCore(EventHandler):
-    interested = [GroupMessage]
+class NowdayNews(Service):
+    pass
 
+
+class NowdayNewsCore(ServiceBehavior[NowdayNews]):
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if not evt.message == "读懂世界":
             return
@@ -29,8 +32,3 @@ class NowdayNewsCore(EventHandler):
             for i in Request.Sync.get_iter_content(url):
                 file.write(i)
             file.close()
-
-
-@Service.register("ALL")
-class NowdayNews(Service):
-    cores = [NowdayNewsCore]

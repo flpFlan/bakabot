@@ -4,7 +4,7 @@ import requests
 
 # -- third party --
 # -- own --
-from services.base import Service.register, Service, IMessageFilter, EventHandler
+from services.base import Service, ServiceBehavior, OnEvent, IMessageFilter
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -13,10 +13,14 @@ from cqhttp.cqcode import Image
 # -- code --
 
 
-class RandomTouHouCore(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
+class RandomTouHou(Service):
+    pass
+
+
+class RandomTouHouCore(ServiceBehavior[RandomTouHou], IMessageFilter):
     entrys = [r"^随机东方[图片?]?\s*(?P<tag>[\w\s\-_，,]+)?"]
 
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
@@ -38,9 +42,4 @@ class RandomTouHouCore(EventHandler, IMessageFilter):
     async def get_random_th(self, tag: str = ""):
         url = f"https://img.paulzzh.tech/touhou/random?type=json&site=all&size=all&tag={tag}"
         r = Request.Sync.get_json(url, timeout=10)
-        return r.get("url")
-
-
-@Service.register("ALL")
-class RandomTouHou(Service):
-    cores = [RandomTouHouCore]
+        return r["url"]

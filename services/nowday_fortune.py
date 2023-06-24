@@ -7,18 +7,67 @@ from typing import cast
 from numpy.random import normal
 
 # -- own --
-from services.base import Service.register, Service, EventHandler, SheduledHandler
+from services.base import Service, ServiceBehavior, OnEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.cqcode import At, Image
+from accio import ACCIO
+from utils.wrapper import Scheduled
 
 # -- code --
 exp = {"大吉": 96, "中吉": 80, "小吉": 64, "小凶": 48, "中凶": 32, "大凶": 16, "baka": 999}
 
 
-class NowdayFortuneCore(EventHandler):
-    interested = [GroupMessage]
+class NowdayFortune(Service):
+    async def __setup(self):
+        ACCIO.db.execute(
+            "create table if not exists "
+            "nowday_fortune ("
+            "qq_number      integer primary key, "
+            "fortune        text, "
+            "money          integer, "
+            "love           integer, "
+            "work           integer "
+            ")"
+        )
+        self.fortune_graph = self.get()
 
+    def get(self) -> dict[int, list[int | str]]:
+        db = ACCIO.db
+        db.execute("select qq_number,fortune,money,love,work from nowday_fortune")
+        r = db.fatchall()
+
+        return {l[0]: [l[1], l[2], l[3]] for l in r}
+
+    def add(self, qq_number, fortune, money, love, work):
+        db = ACCIO.db
+        db.execute(
+            "insert or replace into nowday_fortune (qq_number,fortune,money,love,work) values (?,?,?,?,?)",
+            (qq_number, fortune, money, love, work),
+        )
+        self.fortune_graph[qq_number] = [fortune, money, love, work]
+
+    def delete(self, qq_number):
+        if not qq_number in self.fortune_graph:
+            return
+        db = ACCIO.db
+        db.execute("delete from nowday_fortune where qq_number = ?", (qq_number,))
+        self.fortune_graph.pop(qq_number, None)
+
+    def clear(self):
+        db = ACCIO.db
+        db.execute("delete from nowday_fortune")
+        self.fortune_graph.clear()
+
+
+class NowdayFortuneCore(ServiceBehavior[NowdayFortune]):
+    async def __setup(self):
+        Scheduled.Crontab().hour(0).add(self.refresh_fortune)
+
+    async def refresh_fortune(self):
+        self.service.clear
+
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if not evt.message in ("jrys", "今日运势", "每日运势"):
             return
@@ -51,59 +100,3 @@ class NowdayFortuneCore(EventHandler):
         m = f"{At(qq_number)}\n运势：{fortune}\n爱情运：{love}\n财运：{money}\n事业运：{work}{Image(f'file:///{path}')}"
 
         await SendGroupMsg(evt.group_id, m).do()
-
-
-class RefreshFortune(SheduledHandler):
-    shedule_trigger = "cron"
-    args = {"hour": 0}
-
-    async def handle(self):
-        service = cast(NowdayFortune, self.service)
-        service.clear()
-
-
-@Service.register("ALL")
-class NowdayFortune(Service):
-    cores = [NowdayFortuneCore, RefreshFortune]
-
-    async def start_up(self):
-        await super().start_up()
-        bot = self.bot
-        bot.db.execute(
-            "create table if not exists "
-            "nowday_fortune ("
-            "qq_number      integer primary key, "
-            "fortune        text, "
-            "money          integer, "
-            "love           integer, "
-            "work           integer "
-            ")"
-        )
-        self.fortune_graph = self.get()
-
-    def get(self) -> dict[int, list[int | str]]:
-        db = self.bot.db
-        db.execute("select qq_number,fortune,money,love,work from nowday_fortune")
-        r = db.fatchall()
-
-        return {l[0]: [l[1], l[2], l[3]] for l in r}
-
-    def add(self, qq_number, fortune, money, love, work):
-        db = self.bot.db
-        db.execute(
-            "insert or replace into nowday_fortune (qq_number,fortune,money,love,work) values (?,?,?,?,?)",
-            (qq_number, fortune, money, love, work),
-        )
-        self.fortune_graph[qq_number] = [fortune, money, love, work]
-
-    def delete(self, qq_number):
-        if not qq_number in self.fortune_graph:
-            return
-        db = self.bot.db
-        db.execute("delete from nowday_fortune where qq_number = ?", (qq_number,))
-        self.fortune_graph.pop(qq_number, None)
-
-    def clear(self):
-        db = self.bot.db
-        db.execute("delete from nowday_fortune")
-        self.fortune_graph.clear()
