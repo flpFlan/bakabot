@@ -7,7 +7,7 @@ import requests
 import aiohttp
 
 # -- own --
-from services.base import IMessageFilter, register_service_to, Service, EventHandler
+from services.base import IMessageFilter, Service.register, Service, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -69,6 +69,6 @@ class PidCore(EventHandler, IMessageFilter):
         return urljoin(PID_URL, f"{pid}.{format}")
 
 
-@register_service_to("ALL")
+@Service.register("ALL")
 class Pid(Service):
     cores = [PidCore]

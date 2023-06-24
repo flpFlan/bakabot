@@ -3,7 +3,7 @@ import requests
 
 # -- third party --
 # -- own --
-from services.base import register_service_to, Service, EventHandler
+from services.base import Service, ServiceBehavior, OnEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -12,9 +12,12 @@ from cqhttp.cqcode import Image
 # -- code --
 
 
-class ScreenshotCore(EventHandler):
-    interested = [GroupMessage]
+class DaXueXiScreenshot(Service):
+    pass
 
+
+class ScreenshotCore(ServiceBehavior[DaXueXiScreenshot]):
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if not evt.message == "青年大学习截图生成":
             return
@@ -24,7 +27,7 @@ class ScreenshotCore(EventHandler):
         except requests.ConnectTimeout:
             m = "请求超时(Ｔ▽Ｔ)"
 
-        await SendGroupMsg(evt.group_id, m).do()
+        SendGroupMsg(evt.group_id, m).forget()
 
     async def get_screenshot(self):
         req_url = "https://qczj.h5yunban.com/qczj-youth-learning/cgi-bin/common-api/course/current"
@@ -35,8 +38,3 @@ class ScreenshotCore(EventHandler):
         elif url.find("m.html") != -1:
             url = response["result"]["uri"][:-6] + "images/end.jpg"
         return url
-
-
-@register_service_to("ALL")
-class DaXueXiScreenshot(Service):
-    cores = [ScreenshotCore]

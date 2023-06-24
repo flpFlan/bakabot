@@ -4,7 +4,7 @@ import os
 # -- third party --
 
 # -- own --
-from services.base import register_service_to, Service, EventHandler
+from services.base import Service.register, Service, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -31,6 +31,6 @@ class NowdayNewsCore(EventHandler):
             file.close()
 
 
-@register_service_to("ALL")
+@Service.register("ALL")
 class NowdayNews(Service):
     cores = [NowdayNewsCore]

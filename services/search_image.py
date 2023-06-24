@@ -6,7 +6,7 @@ import requests
 # -- third party --
 
 # -- own --
-from services.base import register_service_to, Service, IMessageFilter, EventHandler
+from services.base import Service.register, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -44,6 +44,6 @@ class SearchImageCore(EventHandler, IMessageFilter):
             file.close()
 
 
-@register_service_to("ALL")
+@Service.register("ALL")
 class SearchImage(Service):
     cores = [SearchImageCore]

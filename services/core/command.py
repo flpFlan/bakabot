@@ -8,7 +8,7 @@ from inspect import ismodule
 # -- own --
 from config import Administrators
 from services.base import Service
-from services.base import IMessageFilter, EventHandler
+from services.base import IMessageFilter, EventHub
 from .base import core_service
 from cqhttp.events.message import Message, GroupMessage, PrivateMessage
 from cqhttp.api.message.SendMsg import SendMsg
@@ -26,7 +26,7 @@ def reload(*args):
             importlib.reload(importlib.import_module(arg.__module__))
 
 
-class CommandCore(EventHandler, IMessageFilter):
+class CommandCore(EventHub, IMessageFilter):
     interested = [Message]
     entrys = [
         # r"^/cmd\s+(?P<cmd>[\S]+)(?P<args>(?:\s+[\S]+)+)",
@@ -73,7 +73,7 @@ class CommandCore(EventHandler, IMessageFilter):
         log.warning("Command must be on")
 
 
-class Catch(EventHandler, IMessageFilter):
+class Catch(EventHub, IMessageFilter):
     interested = [GroupMessage]
     entrys = [r"^.catch$"]
     catch = False

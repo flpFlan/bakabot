@@ -7,7 +7,7 @@ from typing import cast
 from numpy.random import normal
 
 # -- own --
-from services.base import register_service_to, Service, EventHandler, SheduledHandler
+from services.base import Service.register, Service, EventHandler, SheduledHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.cqcode import At, Image
@@ -62,7 +62,7 @@ class RefreshFortune(SheduledHandler):
         service.clear()
 
 
-@register_service_to("ALL")
+@Service.register("ALL")
 class NowdayFortune(Service):
     cores = [NowdayFortuneCore, RefreshFortune]
 

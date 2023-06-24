@@ -5,7 +5,7 @@ from typing import cast
 # -- third party --
 # -- own --
 from services.core.base import core_service
-from services.base import EventHandler, Service, IMessageFilter
+from services.base import EventHub, Service, IMessageFilter
 from cqhttp.base import Event
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
@@ -14,7 +14,7 @@ from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 log = logging.getLogger("bot.service.coreManager")
 
 
-class BlockGroup(EventHandler):
+class BlockGroup(EventHub):
     interested = [Event]
 
     def run(self):
@@ -64,7 +64,7 @@ class BlockGroup(EventHandler):
         pass
 
 
-class BotControl(EventHandler, IMessageFilter):
+class BotControl(EventHub, IMessageFilter):
     interested = [GroupMessage]
     entrys = [r"^/bot on$", r"^/bot off$"]
 
@@ -89,7 +89,7 @@ class BotControl(EventHandler, IMessageFilter):
         pass
 
 
-class ServiceControl(EventHandler, IMessageFilter):
+class ServiceControl(EventHub, IMessageFilter):
     interested = [GroupMessage]
     entrys = [
         r"^/(?P<get>get)$",

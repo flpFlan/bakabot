@@ -8,7 +8,7 @@ from collections import defaultdict
 # -- own --
 from services.base import (
     IMessageFilter,
-    register_service_to,
+    Service.register,
     Service,
     EventHandler,
     SheduledHandler,
@@ -129,7 +129,7 @@ class CPWord(EventHandler, IMessageFilter):
         self.words.clear()
 
 
-@register_service_to("ALL")
+@Service.register("ALL")
 class NowdayCP(Service):
     cores = [NowdayCPCore, RefreshCP, CPWord]
 

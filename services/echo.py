@@ -5,8 +5,7 @@ import random
 # -- third party --
 
 # -- own --
-from typing import cast
-from services.base import register_service_to, Service, EventHandler
+from services.base import Service, ServiceBehavior, OnEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from .game.base import ManagerCore
@@ -14,13 +13,17 @@ from .game.base import ManagerCore
 # -- code --
 
 
-class EchoCore(EventHandler):
-    interested = [GroupMessage]
+class Echo(Service):
+    async def __setup(self):
+        self.msg_graph: dict[int, list[str | None]] = defaultdict(lambda: [None, None])
 
+
+class EchoCore(ServiceBehavior[Echo]):
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if evt.user_id in ManagerCore.games:
             return
-        cache = cast(Echo, self.service).msg_graph[evt.group_id]
+        cache = self.service.msg_graph[evt.group_id]
         m1, m2 = cache
         if m1 == m2 == evt.message:
             cache[0], cache[1] = None, None
@@ -34,12 +37,3 @@ class EchoCore(EventHandler):
         e = ["天天", "你", "群", "读复"]
         random.shuffle(e)
         return "".join(e)
-
-
-@register_service_to("ALL")
-class Echo(Service):
-    cores = [EchoCore]
-
-    async def start_up(self):
-        await super().start_up()
-        self.msg_graph: dict[int, list[str | None]] = defaultdict(lambda: [None, None])

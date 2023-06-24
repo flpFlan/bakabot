@@ -8,7 +8,7 @@ from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
 # -- third party --
 # -- own --
-from services.base import EventHandler, Service, IMessageFilter
+from services.base import EventHub, Service, IMessageFilter
 from services.core.base import core_service
 from cqhttp.events.base import CQHTTPEvent
 
@@ -97,8 +97,20 @@ class Game:
             pass
         del self
 
+# TODO
+class Game:
 
-class ManagerCore(EventHandler, IMessageFilter):
+    def __init__(self):
+        ...
+
+    def __aenter__(self):
+        ...
+    
+    def __aexit__(self, exc_type, exc_val, exc_tb):
+        ...
+
+
+class ManagerCore(EventHub, IMessageFilter):
     interested = [CQHTTPEvent]
     entrys = [r"^/game\s+(?P<game>.+)"]
     games: dict[int, Game] = {}

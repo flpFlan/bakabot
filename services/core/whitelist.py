@@ -4,7 +4,7 @@ from typing import cast
 
 # -- third party --
 # -- own --
-from services.base import EventHandler, IMessageFilter, Service
+from services.base import EventHub, IMessageFilter, Service
 from services.core.base import core_service
 from cqhttp.events.notice import GroupPoked
 from cqhttp.events.message import GroupMessage
@@ -16,7 +16,7 @@ log = logging.getLogger("bot.service.whitelist")
 whitelist: set[int] = set()
 
 
-class BlockGroup(EventHandler):
+class BlockGroup(EventHub):
     interested = [GroupMessage, GroupPoked]
 
     def run(self):
@@ -31,7 +31,7 @@ class BlockGroup(EventHandler):
             evt.cancel()
 
 
-class Ping(EventHandler, IMessageFilter):
+class Ping(EventHub, IMessageFilter):
     interested = [GroupMessage]
     entrys = [
         r"^(?P<ping>/ping)\s+(?P<bot>.+)",

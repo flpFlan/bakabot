@@ -11,7 +11,7 @@ import redis
 
 # -- own --
 from services.base import (
-    register_service_to,
+    Service.register,
     Service,
     ServiceBehavior,
     EventHandler,
@@ -125,7 +125,7 @@ class NotifyGroupManager(EventHandler, IMessageFilter):
                 await SendGroupMsg(group_id, "THBMessageNotify已关闭").do()
 
 
-@register_service_to("Aya")
+@Service.register("Aya")
 class THBMessageNotify(Service):
     cores = [NotifyGroupManager, THBMessageNotifyCore]
 

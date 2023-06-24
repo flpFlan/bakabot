@@ -6,11 +6,13 @@ from typing import Optional, get_args
 
 # -- third party --
 from quart import Quart, websocket
+from aiohttp import ClientSession
 
 # -- own --
 from cqhttp.events.base import CQHTTPEvent
 from cqhttp.api.base import ApiAction
 from utils.algorithm import first
+from accio import ACCIO
 
 # -- code --
 log = logging.getLogger("bot.cqhttp")
@@ -19,7 +21,11 @@ log = logging.getLogger("bot.cqhttp")
 class CQHTTPAdapter:
     Adapter = Quart(__name__)
 
-    def run(self, host="0.0.0.0", port=2333):
+    def __init__(self):
+        self.endpoint = ACCIO.conf.get("Bot.Adapter", "endpoint")
+        self.client= ClientSession()
+
+    def run_at(self, host:str, port=2333):
         self.Adapter.run(host, port)
 
     async def shutdown(self):
@@ -48,10 +54,8 @@ class CQHTTPAdapter:
         if echo:
             form["echo"] = echo
 
-        data = json.dumps(form)
-        await websocket.send(data)
-        result = await websocket.receive()
-        return json.loads(result)
+        result= await self.client.post(self.endpoint,json=form)
+        return await result.json()
 
     @staticmethod
     def trans_json_to_evt(rev: dict) -> CQHTTPEvent:

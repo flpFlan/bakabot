@@ -4,7 +4,7 @@ import requests
 
 # -- third party --
 # -- own --
-from services.base import IMessageFilter, register_service_to, Service, EventHandler
+from services.base import IMessageFilter, Service.register, Service, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.cqcode import Image
@@ -33,6 +33,6 @@ Buy me a coffee :)
         await SendGroupMsg(evt.group_id, m).do()
 
 
-@register_service_to("BAKA")
+@Service.register("BAKA")
 class Sponsor(Service):
     cores = [SponsorCore]

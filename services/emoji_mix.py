@@ -3,10 +3,9 @@ import re
 
 # -- third party --
 import emoji
-import aiohttp
 
 # -- own --
-from services.base import IMessageFilter, register_service_to, Service, EventHandler
+from services.base import IMessageFilter, Service, ServiceBehavior, OnEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -18,14 +17,18 @@ emojis = sorted(emoji.EMOJI_DATA, key=len, reverse=True)
 pattern = "(" + "|".join(re.escape(u) for u in emojis) + ")"
 
 
+class EmojiMix(Service):
+    pass
+
+
 class EmojiError(Exception):
     pass
 
 
-class EmojiMixCore(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
+class EmojiMixCore(ServiceBehavior[EmojiMix], IMessageFilter):
     entrys = [rf"^emoji合成\s*(?P<emoji>{pattern}{{2}})$"]
 
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
@@ -57,8 +60,3 @@ class EmojiMixCore(EventHandler, IMessageFilter):
         if "️" in emoji:
             emoji = emoji.replace("️", "") + "-ufe0f"
         return emoji
-
-
-@register_service_to("ALL")
-class EmojiMix(Service):
-    cores = [EmojiMixCore]

@@ -6,7 +6,7 @@ from collections import defaultdict
 time_graph = defaultdict(lambda: 0.0)
 
 
-def timecooling(seconds: float):
+def cool_down_for(seconds: float):
     def wrapper(func):
         async def _cfunc(*args, **kwargs):
             now_time = time.time()

@@ -3,7 +3,7 @@
 import random
 
 # -- own --
-from services.base import register_service_to, Service, EventHandler, IMessageFilter
+from services.base import Service.register, Service, EventHandler, IMessageFilter
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
@@ -38,6 +38,6 @@ class RollCore(EventHandler, IMessageFilter):
         await SendGroupMsg(evt.group_id, m).do()
 
 
-@register_service_to("ALL")
+@Service.register("ALL")
 class Roll(Service):
     cores = [RollCore]

@@ -5,7 +5,7 @@ from urllib.parse import quote
 
 # -- third party --
 # -- own --
-from services.base import register_service_to, Service, IMessageFilter, EventHandler
+from services.base import Service.register, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -81,6 +81,6 @@ class YukkuriCore(EventHandler, IMessageFilter):
         return final_result
 
 
-@register_service_to("ALL")
+@Service.register("ALL")
 class Yukkuri(Service):
     cores = [YukkuriCore]

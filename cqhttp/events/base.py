@@ -1,6 +1,7 @@
 # -- stdlib --
 from collections import defaultdict
 from dataclasses import dataclass,field
+from typing import ClassVar, Type
 
 # -- third party --
 # -- own --
@@ -13,7 +14,7 @@ def nested_dict():
 
 @dataclass
 class CQHTTPEvent(Event):
-    classes=nested_dict()
+    classes:ClassVar[dict]=nested_dict()
 
     post_type: str=field(kw_only=True)
     time: int=field(kw_only=True)
@@ -46,3 +47,14 @@ class CQHTTPEvent(Event):
             raise Exception("post_type error")
         Event.classes.add(evt)
         return evt
+    
+    @classmethod
+    def get_real_types(cls)->list[Type["CQHTTPEvent"]]:
+        """get sub_events that can be actually delivered by go-cqhttp"""
+        subs=[]
+        for sub in cls.__subclasses__():
+            if sub in Event.classes:
+                subs.append(sub)
+            elif c:=sub.get_real_types():
+                subs.extend(c)
+        return subs

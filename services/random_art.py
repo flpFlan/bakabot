@@ -7,7 +7,7 @@ from urllib.request import urlopen
 # -- third party --
 
 # -- own --
-from services.base import register_service_to, Service, IMessageFilter, EventHandler
+from services.base import Service.register, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
@@ -79,6 +79,6 @@ class RandomArtCore(EventHandler, IMessageFilter):
         return None
 
 
-@register_service_to("ALL")
+@Service.register("ALL")
 class RandomArt(Service):
     cores = [RandomArtCore]

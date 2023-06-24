@@ -7,7 +7,7 @@ from Crypto.Cipher import AES
 import fake_useragent
 
 # -- own --
-from services.base import register_service_to, Service, IMessageFilter, EventHandler
+from services.base import Service.register, Service, IMessageFilter, EventHandler
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.cqcode import Music
@@ -121,6 +121,6 @@ class SearchSongCore(EventHandler, IMessageFilter):
                 return song_id
 
 
-@register_service_to("ALL")
+@Service.register("ALL")
 class SearchSong(Service):
     cores = [SearchSongCore]

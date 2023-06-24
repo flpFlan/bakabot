@@ -1,8 +1,9 @@
-core_services = []
+from services.base import Service
 
+class CoreService(Service):
+    classes=set()
+    priority=Service.Priority.Highest
 
 def core_service(cls):
-    core_services.append(cls)
-    if not cls.__dict__.get("priority", None):
-        cls.priority = 0
+    CoreService.classes.add(cls)
     return cls

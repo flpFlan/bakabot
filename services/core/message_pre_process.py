@@ -3,12 +3,12 @@
 # -- third party --
 # -- own --
 from services.core.base import core_service
-from services.base import EventHandler, Service
+from services.base import EventHub, Service
 from cqhttp.events.message import Message
 
 
 # -- code --
-class Process(EventHandler):
+class Process(EventHub):
     interested = [Message]
 
     async def handle(self, evt: Message):

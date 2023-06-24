@@ -3,7 +3,7 @@ import os
 
 # -- third party --
 # -- own --
-from services.base import register_service_to, Service, EventHandler
+from services.base import Service.register, Service, EventHandler
 from cqhttp.events.notice import GroupMemberIncreased
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from services.core.whitelist import whitelist
@@ -26,6 +26,6 @@ class WelcomeNewcomerCore(EventHandler):
         await SendGroupMsg(evt.group_id, m).do()
 
 
-@register_service_to("ALL")
+@Service.register("ALL")
 class WelcomeNewcomer(Service):
     cores = [WelcomeNewcomerCore]

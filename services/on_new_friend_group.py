@@ -4,7 +4,7 @@
 # -- own --
 import asyncio
 from cqhttp.api.message.SendPrivateMsg import SendPrivateMsg
-from services.base import register_service_to, Service, EventHandler
+from services.base import Service.register, Service, EventHandler
 from cqhttp.events.request import FriendRequest, GroupInviteRequest
 from cqhttp.events.notice import GroupMemberIncreased, GroupMemberDecreased, FriendAdded
 from cqhttp.api.message.SendMsg import SendMsg
@@ -53,6 +53,6 @@ class OnNewFriendGroupEcho(EventHandler):
             await SendMsg(user_id=evt.user_id, message=m).do()
 
 
-@register_service_to("ALL")
+@Service.register("ALL")
 class OnNewFriendGroup(Service):
     cores = [OnNewFriendGroupCore, OnNewFriendGroupEcho]
