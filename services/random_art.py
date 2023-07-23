@@ -38,7 +38,7 @@ class RandomArtCore(ServiceBehavior[RandomArt], IMessageFilter):
     async def handle(self, evt: GroupMessage):
         if r := self.filter(evt):
             try:
-                if tag := r.get("tag", ""):
+                if tag := r["tag"]:
                     if url := await self.search_random(tag):
                         m = f"{Image(url)}"
                     else:
@@ -55,12 +55,13 @@ class RandomArtCore(ServiceBehavior[RandomArt], IMessageFilter):
         if type == 0:
             key = ["img", "imgurl"]
             url = random.choice(urllist_0)
-            resonse = Request.Sync.get_json(url)
+            resonse = await Request.get_json(url)
             for i in key:
                 if i in resonse:
                     if resonse[i].startswith("//"):
                         resonse[i] = "http:" + resonse[i]
                     return resonse[i]
+            return ""  # for type check
         else:
             url = random.choice(urllist_1)
             return urlopen(url, timeout=5).geturl()
@@ -69,7 +70,7 @@ class RandomArtCore(ServiceBehavior[RandomArt], IMessageFilter):
         for c in reversed(range(6)):
             data = {"str": tag, "id": 24 * random.randint(0, c)}
             url = f'https://www.duitang.com/napi/blogv2/list/by_search/?kw={data["str"]}&after_id={data["id"]}'
-            r = Request.Sync.get_text(url, timeout=10)
+            r = await Request.get_text(url, timeout=10)
             if len(r) >= 50:
                 break
         assert r  # type: ignore

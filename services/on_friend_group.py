@@ -1,6 +1,3 @@
-# -- stdlib --
-
-# -- third party --
 # -- own --
 from cqhttp.api.message.SendPrivateMsg import SendPrivateMsg
 from services.base import Service, ServiceBehavior, OnEvent
@@ -20,7 +17,6 @@ class OnFriendGroup(Service):
     pass
 
 
-# TODO
 class OnFriendGroupCore(ServiceBehavior[OnFriendGroup]):
     @OnEvent[FriendRequest, GroupInviteRequest].add_listener
     async def on_request(self, evt: FriendRequest | GroupInviteRequest):
@@ -31,7 +27,7 @@ class OnFriendGroupCore(ServiceBehavior[OnFriendGroup]):
             m = f"有新的群聊邀请:\nuser:\n{evt.user_id}\ngroup:\n{evt.group_id}\ncomment:\n{evt.comment}"
             await SetGroupAddRequest(evt.flag, "invite", True).do()
 
-        SendPrivateMsg.many(Administrators, m).forget()
+        SendPrivateMsg.many(ACCIO.bot.Administrators, m).forget()
 
     @OnEvent[GroupMemberDecreased].add_listener
     async def on_member_decreased(self, evt: GroupMemberDecreased):
@@ -40,7 +36,7 @@ class OnFriendGroupCore(ServiceBehavior[OnFriendGroup]):
         WhiteList.instance.delete(evt.group_id)
         m = f"{ACCIO.bot.name}已退出群聊\ngroup:\n{evt.group_id}\noperator:\n{evt.operator_id}"
 
-        SendPrivateMsg.many(Administrators, m).forget()
+        SendPrivateMsg.many(ACCIO.bot.Administrators, m).forget()
 
 
 class OnFriendGroupEcho(ServiceBehavior[OnFriendGroup]):

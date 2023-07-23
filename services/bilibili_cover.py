@@ -48,8 +48,7 @@ class BilibiliCoverCore(ServiceBehavior[BilibiliCover], IMessageFilter):
         if not (r := self.filter(evt)):
             return
         group_id = evt.group_id
-        type = (r.get("type", "") or "live").lower()
-        arg = r.get("arg", "")
+        type, arg = (r["type"] or "live").lower(), r["arg"]
         if type == "bv":
             arg = bv_to_av("BV" + arg)
             type = "av"
@@ -62,5 +61,5 @@ class BilibiliCoverCore(ServiceBehavior[BilibiliCover], IMessageFilter):
     async def get_b_cover(self, id, type="av"):
         url = f"https://apiv2.magecorn.com/bilicover/get?"
         "type={type}&id={id}&client=2.5.2"
-        r = Request.Sync.get_json(url)
+        r = await Request.get_json(url)
         return r.get("url", None)

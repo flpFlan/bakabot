@@ -22,7 +22,7 @@ class ChooseOrCore(ServiceBehavior[ChooseOr], IMessageFilter):
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
-        choices = r.get("choices", "").split("还是")
+        choices = r.group("choices").split("还是")
         if not all(choices):
             return
         final_choice = random.choice(choices)

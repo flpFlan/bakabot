@@ -3,7 +3,7 @@ from collections import defaultdict
 from typing import Callable, ClassVar
 
 
-class SubEvent:
+class CoreEvent:
     registers: ClassVar[dict[str, set[Callable[[str, dict], None]]]] = defaultdict(set)
 
     @classmethod

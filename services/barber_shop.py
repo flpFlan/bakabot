@@ -17,7 +17,7 @@ class BarberShop(Service):
         self.words = await self.get_words()
 
     async def get_words(self) -> list[str]:
-        r = Request.Sync.get_json(url)
+        r = await Request.get_json(url)
         return r["post"]
 
 
@@ -28,7 +28,6 @@ class BarberShopCore(ServiceBehavior[BarberShop], IMessageFilter):
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
-        name = r.get("name", "noname")
-        word = random.choice(self.service.words).replace("阿咪", name)
+        word = random.choice(self.service.words).replace("阿咪", r["name"])
 
         await SendGroupMsg(evt.group_id, word).do()

@@ -25,7 +25,9 @@ TYPE = {
 
 
 class Yukkuri(Service):
-    pass
+    """食用方法：油库里 + 1-8(可选，表示音源种类) + 文本"""
+
+    name = "油库里"
 
 
 class YukkuriCore(ServiceBehavior[Yukkuri], IMessageFilter):
@@ -36,8 +38,7 @@ class YukkuriCore(ServiceBehavior[Yukkuri], IMessageFilter):
         if r := self.filter(evt):
             group_id = evt.group_id
 
-            type = r.get("type") or "f1"
-            content = r.get("content")
+            type, content = r["type"] or "f1", r["content"]
             try:
                 content = (await self.trans_to_jp(content)).replace(" ", "")
             except requests.ConnectTimeout:
@@ -55,7 +56,7 @@ class YukkuriCore(ServiceBehavior[Yukkuri], IMessageFilter):
         text = quote(text)
         url = f"https://www.yukumo.net/api/v2/aqtk{type}/koe.mp3?type={sub_type}&kanji={text}"
         with open(r".\src\temp\yukkuri_temp.mp3", "wb") as file:
-            for i in Request.Sync.get_iter_content(url):
+            for i in await Request.get_iter_content(url):
                 file.write(i)
             file.close()
 
@@ -68,7 +69,7 @@ class YukkuriCore(ServiceBehavior[Yukkuri], IMessageFilter):
             "optionext": "zenkaku",
         }
         url = "https://www.ltool.net/chinese-simplified-and-traditional-characters-pinyin-to-katakana-converter-in-simplified-chinese.php"
-        r = Request.Sync.post_text(url, data=data)
+        r = await Request.post_text(url, data=data)
         return self.filt_html(r)
 
     def filt_html(self, html):

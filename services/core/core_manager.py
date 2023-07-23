@@ -1,40 +1,121 @@
 # -- stdlib --
 import logging
-from typing import cast
 
 # -- third party --
 # -- own --
-from services.core.base import core_service
-from services.base import EventHub, Service, IMessageFilter
-from cqhttp.base import Event
+from services.base import ServiceBehavior, Service, IMessageFilter, OnEvent
+from cqhttp.events import CQHTTPEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+from accio import ACCIO
 
 # -- code --
 log = logging.getLogger("bot.service.coreManager")
 
 
-class BlockGroup(EventHub):
-    interested = [Event]
+class CoreManager(Service):
+    pass
 
-    def run(self):
-        super().run()
-        db = self.bot.db
-        db.execute("create table if not exists blockgroups (group_id integer unique)")
+
+class BotControl(ServiceBehavior[CoreManager], IMessageFilter):
+    entrys = [r"^/bot on$", r"^/bot off$"]
+
+    @OnEvent[GroupMessage].add_listener
+    async def handle(self, evt: GroupMessage):
+        if not (
+            evt.sender.role in ("owner", "admin")
+            or evt.user_id in ACCIO.bot.Administrators
+        ):
+            return
+        msg = evt.message
+        group_id = evt.group_id
+        if msg == "/bot on":
+            BlockGroup.instance.delete(group_id)
+            await SendGroupMsg(group_id, f"{ACCIO.bot.name} running！").do()
+        if msg == "/bot off":
+            BlockGroup.instance.add(group_id)
+            c = SendGroupMsg(group_id, f"{ACCIO.bot.name} closed")
+            await c.do()
+
+
+class ServiceControl(ServiceBehavior[CoreManager], IMessageFilter):
+    entrys = [
+        r"^/(?P<get>get)$",
+        r"^/close (?P<service_to_close>.+)",
+        r"^/start (?P<service_to_start>.+)",
+        r"^/help (?P<service>.+)",
+    ]
+
+    @OnEvent[GroupMessage].add_listener
+    async def handle(self, evt: GroupMessage):
+        if not evt.user_id in ACCIO.bot.Administrators:
+            return
+        if not (r := self.filter(evt)):
+            return
+        r = r.groupdict()
+        if r.get("get"):
+            await SendGroupMsg(evt.group_id, self.get_all_services()).do()
+        elif s := r.get("service"):
+            await SendGroupMsg(evt.group_id, self.get_help(s)).do()
+        elif s := r.get("service_to_close"):
+            await self.close_service(evt.group_id, s)
+        elif s := r.get("service_to_start"):
+            await self.start_service(evt.group_id, s)
+
+    def get_all_services(self):
+        l = [
+            f"{service.name}: {'🟢'if service.get_activity()else '🔴'}"
+            for service in ACCIO.bot.services
+        ]
+        return "\n".join(l)
+
+    def get_help(self, service):
+        for s in ACCIO.bot.services:
+            if s.name == service:
+                return s.descrition
+        return "Unknown service"
+
+    async def close_service(self, group_id, service):
+        to_close = [s for s in ACCIO.bot.services if s.name == service]
+        if not to_close:
+            await SendGroupMsg(group_id, "Unknown service").do()
+            return
+        for s in to_close:
+            if not s.get_activity():
+                await SendGroupMsg(group_id, f"{service}已处于关闭状态！").do()
+                continue
+            await s.shutdown()
+            await SendGroupMsg(group_id, f"{service}已关闭！").do()
+
+    async def start_service(self, group_id, service):
+        to_start = [s for s in ACCIO.bot.services if s.name == service]
+        if not to_start:
+            await SendGroupMsg(group_id, "Unknown service").do()
+            return
+        for s in to_start:
+            if s.get_activity():
+                await SendGroupMsg(group_id, f"{service}已处于启动状态！").do()
+                continue
+            await s.start()
+            await SendGroupMsg(group_id, f"{service}已启动！").do()
+
+
+class BlockGroup(ServiceBehavior[CoreManager]):
+    async def __setup(self):
+        ACCIO.db.execute(
+            "create table if not exists blockgroups (group_id integer unique)"
+        )
         self.blockgroups = self.get()
         BlockGroup.instance = self
 
-    async def handle(self, evt: Event):
+    @OnEvent[CQHTTPEvent].add_listener
+    async def handle(self, evt: CQHTTPEvent):
         if group_id := getattr(evt, "group_id", None):
             if group_id in self.blockgroups:
-                if isinstance(evt, SendGroupMsg):
-                    if evt._.args.get("bot off", None):
-                        return
                 evt.cancel()
 
     def get(self) -> set[int]:
-        bot = self.bot
-        db = bot.db
+        db = ACCIO.db
         db.execute("select group_id from blockgroups")
         result = db.fatchall()
         return set(group[0] for group in result)
@@ -44,11 +125,7 @@ class BlockGroup(EventHub):
         if group_id in blockgroups:
             log.warning("try to add group_id already exist")
             return
-        bot = self.bot
-        db = bot.db
-
-        db.execute("insert into blockgroups (group_id) values (?)", (group_id,))
-        db.commit()
+        ACCIO.db.execute("insert into blockgroups (group_id) values (?)", (group_id,))
         blockgroups.add(group_id)
 
     def delete(self, group_id: int):
@@ -56,93 +133,5 @@ class BlockGroup(EventHub):
         if group_id not in blockgroups:
             log.warning("try to delete group_id not exist")
             return
-        bot = self.bot
-        bot.db.execute("delete from blockgroups where group_id = ?", (group_id,))
+        ACCIO.db.execute("delete from blockgroups where group_id = ?", (group_id,))
         blockgroups.remove(group_id)
-
-    def close(self):
-        pass
-
-
-class BotControl(EventHub, IMessageFilter):
-    interested = [GroupMessage]
-    entrys = [r"^/bot on$", r"^/bot off$"]
-
-    async def handle(self, evt: GroupMessage):
-        from config import Administrators
-
-        if not (evt.sender.role in ("owner", "admin") or evt.user_id in Administrators):
-            return
-        bot = self.bot
-        msg = evt.message
-        group_id = evt.group_id
-        if msg == "/bot on":
-            BlockGroup.instance.delete(group_id)
-            await SendGroupMsg(group_id, f"{bot.name} running！").do()
-        if msg == "/bot off":
-            BlockGroup.instance.add(group_id)
-            c = SendGroupMsg(group_id, f"{bot.name} closed")
-            c._.args["bot off"] = True
-            await c.do()
-
-    def close(self):
-        pass
-
-
-class ServiceControl(EventHub, IMessageFilter):
-    interested = [GroupMessage]
-    entrys = [
-        r"^/(?P<get>get)$",
-        r"/close (?P<service_to_close>.+)",
-        r"/start (?P<service_to_start>.+)",
-    ]
-
-    async def handle(self, evt: GroupMessage):
-        from config import Administrators
-
-        if not evt.user_id in Administrators:
-            return
-        if r := self.filter(evt):
-            group_id = evt.group_id
-            if r.get("get", None):
-                bot = self.bot
-                await SendGroupMsg(group_id, str(self.get_all_services())).do()
-            if s := r.get("service_to_close", None):
-                await self.close_service(group_id, s)
-            if s := r.get("service_to_start", None):
-                await self.start_service(group_id, s)
-
-    def get_all_services(self):
-        bot = self.bot
-        graph = {
-            service.__class__.__name__: service.service_on for service in bot.services
-        }
-        return graph
-
-    async def close_service(self, group_id, service):
-        bot = self.bot
-        for s in bot.services:
-            if s.__class__.__name__ == service:
-                if not s.service_on:
-                    await SendGroupMsg(group_id, f"{service}已处于关闭状态！").do()
-                    return
-                await s.close()
-                await SendGroupMsg(group_id, f"{service}已关闭").do()
-
-    async def start_service(self, group_id, service):
-        bot = self.bot
-        for s in bot.services:
-            if s.__class__.__name__ == service:
-                if s.service_on:
-                    await SendGroupMsg(group_id, f"{service}已处于开启状态！").do()
-                    return
-                await s.start()
-                await SendGroupMsg(group_id, f"{service}已开启").do()
-
-    def close(self):
-        pass
-
-
-@core_service
-class CoreManager(Service):
-    cores = [BlockGroup, BotControl, ServiceControl]

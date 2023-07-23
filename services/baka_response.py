@@ -1,7 +1,6 @@
 # -- stdlib --
 from re import RegexFlag
 
-# -- third party --
 # -- own --
 from services.base import IMessageFilter, Service, ServiceBehavior, OnEvent
 from cqhttp.events.message import GroupMessage
@@ -24,12 +23,12 @@ class BakaResponseCore(ServiceBehavior[BakaResponse], IMessageFilter):
 
     @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
-        if (r := self.filter(evt)) is not None:
-            await self.response(r, evt.group_id)
+        if r := self.filter(evt):
+            await self.response(r.groupdict(), evt.group_id)
 
     @cool_down_for(seconds=3)
     async def response(self, r, group_id):
-        if word := r.get("word", None):
+        if word := r.get("word"):
             await SendGroupMsg(group_id=group_id, message="不是%s!" % word).do()
-        elif r.get("word2", None):
+        elif _ := r.get("word2"):
             await SendGroupMsg(group_id=group_id, message="我不笨!").do()

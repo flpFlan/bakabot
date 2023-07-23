@@ -18,9 +18,9 @@ class KFC(Service):
         self.texts = await self.get_texts()
 
     async def get_texts(self):
-        r = Request.Sync.get_json(url)
+        r = await Request.get_json(url)
         texts = [t["text"] for t in r]
-        r = Request.Sync.get_json(url2)
+        r = await Request.get_json(url2)
         texts.extend(r["post"])
         return texts
 

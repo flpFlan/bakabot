@@ -2,7 +2,6 @@
 import asyncio, logging
 import sys
 
-# -- third party --
 # -- own --
 from accio import ACCIO
 
@@ -19,9 +18,9 @@ logging.basicConfig(
 )
 
 
-def start_bot():
+async def start_bot():
     bot = ACCIO.bot
-    asyncio.run(bot.set_up())
+    await bot.setup()
     import argparse
 
     parser = argparse.ArgumentParser(prog=sys.argv[0])
@@ -29,8 +28,9 @@ def start_bot():
     parser.add_argument("--port", default="2333", type=int)
     options = parser.parse_args()
 
-    bot.run(options.host, options.port)
+    await bot.run(options.host, options.port)
 
 
 if __name__ == "__main__":
-    start_bot()
+    with asyncio.Runner() as runner:
+        runner.run(start_bot())

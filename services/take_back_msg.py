@@ -6,13 +6,11 @@ from re import compile
 from services.base import Service, ServiceBehavior, IMessageFilter, OnEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.DeleteMsg import DeleteMsg
-from config import Administrators
 from accio import ACCIO
 
 # -- code --
 
 
-# TODO
 class TakeBackMsg(Service):
     pass
 
@@ -26,10 +24,10 @@ class TakeBackMsgCore(ServiceBehavior[TakeBackMsg], IMessageFilter):
 
     @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
-        if not evt.user_id in Administrators:
+        if not evt.user_id in ACCIO.bot.Administrators:
             return
         if not (r := self.filter(evt)):
             return
-        id = r.get("id", "")
+        id = r["id"]
 
         await DeleteMsg(int(id)).do()

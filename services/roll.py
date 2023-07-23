@@ -1,4 +1,3 @@
-# -- stdlib --
 # -- third party --
 import random
 
@@ -11,7 +10,9 @@ from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
 
 class Roll(Service):
-    pass
+    name = "Roll点"
+    descrition = "食用方法：.r + 骰的面数几个数，可选，默认为1d100\n"
+    "例：.r 1d100+1d20+1d10+1d6+1d4+1d3+1d2"
 
 
 class RollCore(ServiceBehavior[Roll], IMessageFilter):
@@ -21,7 +22,7 @@ class RollCore(ServiceBehavior[Roll], IMessageFilter):
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
-        args = r.get("args", "").split("+")
+        args = r.group("args").split("+")
         args = map(lambda x: x.strip(), args)
 
         result = 0

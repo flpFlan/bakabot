@@ -1,22 +1,57 @@
-from adapter import CQHTTPAdapter
+# -- third party --
+import asyncio
+import json
+import threading
+from quart import websocket, Quart
 
-client=CQHTTPAdapter.Adapter.test_client()
+# -- own --
 
-class User:
-    def __init__(self,qq_number:int,nickname:str):
-        self.qq_number=qq_number
-        self.nickname=nickname
+# -- code --
+app = Quart(__name__)
+S = "赞助"
 
-    def say_private(self,to:int,msg:str):
-        ...
-    def say_at_group(self,group_id:int,msg:str):
-        ...
 
-class Group:
-    def __init__(self,id:int,name:str):
-        self.id=id
-        self.name=name
-        self.members:list[User]=[]
-    
-    def add_member(self,user:User):
-        self.members.append(user)
+def change():
+    global S
+    while True:
+        S = input("输入新的语句：")
+
+
+threading.Thread(target=change).start()
+
+
+@app.websocket("/event")
+async def mock_event():
+    while True:
+        await websocket.send(
+            json.dumps(
+                {
+                    "post_type": "message",
+                    "message_type": "group",
+                    "sub_type": "normal",
+                    "message": S,
+                }
+            )
+        )
+        await asyncio.sleep(1)
+
+
+@app.websocket("/api")
+async def mock_api():
+    while True:
+        data = await websocket.receive()
+        data = json.loads(data)
+        print(data)
+        await websocket.send(
+            json.dumps(
+                {
+                    "status": "ok",
+                    "retcode": 0,
+                    "data": {"message_id": 1},
+                }
+            )
+        )
+
+
+if __name__ == "__main__":
+    app.run("localhost", 2333)

@@ -63,8 +63,9 @@ class THBMessageNotify(Service):
 
 
 # TODO
-class THBMessageNotifyCore(ServiceBehavior):
+class THBMessageNotifyCore(ServiceBehavior[THBMessageNotify]):
     async def __setup(self):
+        return
         self.sub = sub = redis.from_url(URL).pubsub()
         sub.psubscribe("thb.*")
 

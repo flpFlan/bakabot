@@ -1,11 +1,10 @@
 # -- stdlib --
-import requests
+import asyncio
 
 # -- third party --
-from aiohttp import ClientSession
+import requests
 from fake_useragent import UserAgent
 
-# -- own --
 # -- code --
 
 HEADERS = {
@@ -17,61 +16,42 @@ HEADERS = {
 
 
 class Request:
-    class Sync:
-        session = requests.session()
-        session.headers = HEADERS
-
-        @classmethod
-        def get(cls, url, *, params=None, headers=None, timeout=None):
-            return cls.session.get(url, params=params, headers=headers, timeout=timeout)
-
-        @classmethod
-        def post(cls, url, json, *, headers=None, timeout=None):
-            return cls.session.post(url, json=json, headers=headers, timeout=timeout)
-
-        @classmethod
-        def get_json(cls, url, *, params=None, headers=None, timeout=None) -> dict:
-            r = cls.session.get(url, params=params, headers=headers, timeout=timeout)
-            return r.json()
-
-        @classmethod
-        def get_text(cls, url, *, params=None, headers=None, timeout=None) -> str:
-            r = cls.session.get(url, params=params, headers=headers, timeout=timeout)
-            return r.text
-
-        @classmethod
-        def get_iter_content(cls, url, *, params=None, headers=None, timeout=None):
-            r = cls.session.get(url, params=params, headers=headers, timeout=timeout)
-            return r.iter_content()
-
-        @classmethod
-        def post_json(cls, url, *, data=None, headers=None, timeout=None) -> dict:
-            r = cls.session.post(url, data=data, headers=headers, timeout=timeout)
-            return r.json()
-
-        @classmethod
-        def post_text(cls, url, *, data=None, headers=None, timeout=None) -> str:
-            r = cls.session.post(url, data=data, headers=headers, timeout=timeout)
-            return r.text
+    session = requests.session()
+    session.headers = HEADERS
 
     @classmethod
-    async def get_json(cls, url, *, headers=None, timeout=None) -> dict:
-        headers = headers or HEADERS
-        async with ClientSession(headers=headers, trust_env=True) as session:
-            async with session.get(url, headers=headers, timeout=timeout) as r:
-                return await r.json(content_type=r.content_type)
+    def get(cls, url, *, params=None, headers=None, timeout=None):
+        return asyncio.to_thread(
+            cls.session.get, url=url, params=params, headers=headers, timeout=timeout
+        )
 
     @classmethod
-    async def get_text(cls, url, *, headers=None, timeout=None) -> str:
-        headers = headers or HEADERS
-        async with ClientSession(headers=headers, trust_env=True) as session:
-            async with session.get(url, headers=headers, timeout=timeout) as r:
-                return await r.text()
+    def post(cls, url, json, *, headers=None, timeout=None):
+        return asyncio.to_thread(
+            cls.session.post, url=url, json=json, headers=headers, timeout=timeout
+        )
 
     @classmethod
-    async def get_iter_content(cls, url, *, headers=None, timeout=None):
-        headers = headers or HEADERS
-        async with ClientSession(headers=headers, trust_env=True) as session:
-            async with session.get(url, headers=headers, timeout=timeout) as r:
-                while chuck := r.content.read(1024):
-                    yield chuck
+    async def get_json(cls, url, *, params=None, headers=None, timeout=None) -> dict:
+        r = await cls.get(url, params=params, headers=headers, timeout=timeout)
+        return r.json()
+
+    @classmethod
+    async def get_text(cls, url, *, params=None, headers=None, timeout=None) -> str:
+        r = await cls.get(url, params=params, headers=headers, timeout=timeout)
+        return r.text
+
+    @classmethod
+    async def get_iter_content(cls, url, *, params=None, headers=None, timeout=None):
+        r = await cls.get(url, params=params, headers=headers, timeout=timeout)
+        return r.iter_content()
+
+    @classmethod
+    async def post_json(cls, url, *, data=None, headers=None, timeout=None) -> dict:
+        r = await cls.post(url, json=data, headers=headers, timeout=timeout)
+        return r.json()
+
+    @classmethod
+    async def post_text(cls, url, *, data=None, headers=None, timeout=None) -> str:
+        r = await cls.post(url, json=data, headers=headers, timeout=timeout)
+        return r.text

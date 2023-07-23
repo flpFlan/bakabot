@@ -32,8 +32,7 @@ class EmojiMixCore(ServiceBehavior[EmojiMix], IMessageFilter):
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
-        emoji1 = r.get("emoji", "")[0]
-        emoji2 = r.get("emoji", "")[1]
+        emoji1, emoji2 = r.group("emoji")
         self.format_emoji(emoji1)
         self.format_emoji(emoji2)
         try:
@@ -50,7 +49,7 @@ class EmojiMixCore(ServiceBehavior[EmojiMix], IMessageFilter):
 
         for _ in range(2):
             url = f"https://www.gstatic.com/android/keyboard/emojikitchen/20201001/{emoji1}/{emoji1}_{emoji2}.png"
-            if Request.Sync.get(url).ok:
+            if (await Request.get(url)).ok:
                 return url
             emoji1, emoji2 = emoji2, emoji1
 

@@ -1,1 +1,3 @@
-from .accio import ACCIO
+from .accio import Accio
+
+ACCIO = Accio()

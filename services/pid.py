@@ -3,25 +3,23 @@ import os
 from urllib.parse import urljoin
 import requests
 
-# -- third party --
-import aiohttp
-
 # -- own --
 from services.base import Service, ServiceBehavior, OnEvent, IMessageFilter
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
-from options import PID_PATH, PID_URL
 from cqhttp.cqcode import Image
+from accio import ACCIO
 
 # -- code --
+PID_PATH = ACCIO.conf.get("Pid", "path")
+PID_URL = ACCIO.conf.get("Pid", "url")
 
 
 class Pid(Service):
-    pass
+    name = "Pid"
 
 
-# TODO
 class PidCore(ServiceBehavior[Pid], IMessageFilter):
     entrys = [r"^pid\s*(?P<pid>\d+(?:-\d+)?)$"]
 
@@ -29,11 +27,9 @@ class PidCore(ServiceBehavior[Pid], IMessageFilter):
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
-        pid = r.get("pid", "")
+        pid = r["pid"]
         try:
-            from config import Administrators
-
-            if evt.user_id in Administrators:
+            if evt.user_id in ACCIO.bot.Administrators:
                 if path := await self.get_art(pid):
                     m = f"{Image(f'file:///{path}')}"
                 else:
@@ -49,7 +45,7 @@ class PidCore(ServiceBehavior[Pid], IMessageFilter):
 
     async def get_art(self, pid):
         url = f"https://pixiv.cat/{pid}.jpg"
-        r = Request.Sync.get(url)
+        r = await Request.get(url)
         format = r.headers["Content-Type"].split("/")[1]
         if format == "html; charset=utf-8":
             return 0
@@ -62,7 +58,7 @@ class PidCore(ServiceBehavior[Pid], IMessageFilter):
 
     async def get_art_webVer(self, pid):
         url = f"https://pixiv.cat/{pid}.jpg"
-        r = Request.Sync.get(url)
+        r = await Request.get(url)
         format = r.headers["Content-Type"].split("/")[1]
         if format == "html; charset=utf-8":
             return 0

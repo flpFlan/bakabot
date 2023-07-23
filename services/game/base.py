@@ -1,16 +1,14 @@
 # -- stdlib --
 import asyncio
 import logging
-import re
 from typing import Optional, cast
 import threading
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
-# -- third party --
 # -- own --
 from services.base import EventHub, Service, IMessageFilter
-from services.core.base import core_service
 from cqhttp.events.base import CQHTTPEvent
+from utils import chronos
 
 # -- code --
 log = logging.getLogger("bot.service.game")
@@ -22,6 +20,7 @@ class GameBehavior(IMessageFilter):
 
     def __init__(self, bot, game):
         super().__init__()
+        self.compile()
         from bot import Bot
 
         self.bot = cast(Bot, bot)
@@ -97,15 +96,15 @@ class Game:
             pass
         del self
 
+
 # TODO
 class Game:
-
     def __init__(self):
         ...
 
     def __aenter__(self):
         ...
-    
+
     def __aexit__(self, exc_type, exc_val, exc_tb):
         ...
 
@@ -134,12 +133,11 @@ class ManagerCore(EventHub, IMessageFilter):
             await game.process_evt(evt)
 
 
-@core_service
-class GameManager(Service):
-    cores = [ManagerCore]
+# class GameManager(Service):
+#     cores = [ManagerCore]
 
-    def shutdown(self):
-        log.warning("core service could not be close")
+#     def shutdown(self):
+#         log.warning("core service could not be close")
 
 
 def register_to_game(name: str):

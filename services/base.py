@@ -3,20 +3,16 @@ import asyncio
 from asyncio import Queue
 import inspect
 import logging
-from re import compile
+from re import Match, compile, RegexFlag
 from collections import defaultdict
-from typing import Callable, ClassVar, Coroutine, Generic, Optional
+from typing import Callable, ClassVar, Coroutine, Generic, List, Literal, Self
 from typing import Tuple, Type, TypeVar
-from typing import TYPE_CHECKING, cast, get_args, overload, DefaultDict
-
-
-# -- third party --
+from typing import TYPE_CHECKING, get_args, overload, DefaultDict
 
 # -- own --
 from accio import ACCIO
 from cqhttp.api.base import ApiAction, ResponseBase
 from cqhttp.events.base import CQHTTPEvent
-from services.base import ServiceBehavior
 
 # -- code --
 
@@ -25,35 +21,61 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("bot.service")
 
+_TCQHTTPEvent = TypeVar("_TCQHTTPEvent", bound=CQHTTPEvent)
+_TApiAction = TypeVar("_TApiAction", bound=ApiAction)
+_TServiceBehavior = TypeVar("_TServiceBehavior", bound="ServiceBehavior")
+_TResponse = TypeVar("_TResponse", bound=ResponseBase)
+
+_A = tuple[ApiAction, Literal[False], ResponseBase]
+_B = tuple[ApiAction, Literal[True], Literal[None]]
+_A_Class_Handler = Callable[
+    [_TServiceBehavior, _TApiAction, _TResponse], Coroutine[None, None, None]
+]
+_B_Class_Handler = Callable[
+    [_TServiceBehavior, _TApiAction], Coroutine[None, None, None]
+]
+_C_Class_Handler = Callable[
+    [_TServiceBehavior, _TCQHTTPEvent], Coroutine[None, None, None]
+]
+_A_Handler = Callable[[_TApiAction, _TResponse], Coroutine[None, None, None]]
+_B_Handler = Callable[[_TApiAction], Coroutine[None, None, None]]
+_C_Handler = Callable[[_TCQHTTPEvent], Coroutine[None, None, None]]
+
 
 class Service:
-    name: ClassVar[Optional[str]] = None
+    name: ClassVar[str] = ""
+    descrition: ClassVar[str] = ""
     behaviors: ClassVar[
         list[Type["ServiceBehavior"]]
-    ]  # override it to make the behaviors sync
+    ]  # override it to make behaviors sync
+
+    def __init_subclass__(cls):
+        cls.name = cls.name or cls.__name__
+        cls.descrition = cls.descrition or cls.__doc__ or ""
 
     def __init__(self):
-        # Service cann't be instantiated directly, use Service.create_instance instead
+        """Service cann't be instantiated directly, use Service.create_instance instead"""
         assert inspect.stack()[1][3] == "create_instance"
         cls = self.__class__
         if not hasattr(cls, "behaviors"):
             cls.behaviors = []
-        self._behaviors = [behavior(self) for behavior in cls.behaviors]
-        self._evt_queue: Queue[
-            CQHTTPEvent | tuple[ApiAction, bool, Optional[dict]]
-        ] = Queue()
+        self._behaviors: list[ServiceBehavior[Self]] = []
+        self._evt_queue: Queue[CQHTTPEvent | _A | _B] = Queue()
         self._active = False
 
-    async def feed(self, evt: CQHTTPEvent | tuple[ApiAction, bool, Optional[dict]]):
+    def feed(self, evt: CQHTTPEvent | _A | _B):
         if self._active:
-            await self._evt_queue.put(evt)
+            self._evt_queue.put_nowait(evt)
 
-    async def run(self):
+    async def loop(self):
         while True:
             evt = await self._evt_queue.get()
-            for behavior in self._behaviors:  # must be sync
-                if behavior.get_activity():
-                    await behavior._handle(evt)
+            _t = asyncio.create_task(self.handle(evt))
+
+    async def handle(self, evt: CQHTTPEvent | _A | _B):
+        for behavior in self._behaviors:  # NOTE: must be sync
+            if behavior.get_activity():
+                await behavior._handle(evt)
 
     def get_activity(self):
         return self._active
@@ -64,7 +86,7 @@ class Service:
     def add_behavior(self, behavior: "ServiceBehavior"):
         self._behaviors.append(behavior)
 
-    async def start_up(self):
+    async def start(self):
         db = ACCIO.db
         service = self.__class__.__name__
         db.execute(
@@ -73,13 +95,10 @@ class Service:
             """,
             (service, True),
         )
-        for core in self._behaviors:
-            core.set_activity(True)
+        for bhv in self._behaviors:
+            bhv.set_activity(True)
 
-        # TODO: add handlers
-        for core in self._behaviors:
-            ...
-        self._r = asyncio.create_task(self.run())
+        self._l = asyncio.create_task(self.loop())
         self._active = True
 
     async def shutdown(self):
@@ -89,21 +108,18 @@ class Service:
             "insert or replace into services (service,service_on) values (?,?)",
             (service, False),
         )
-        db.commit()
-        for core in self._behaviors:
-            core.set_activity(False)
+        for bhv in self._behaviors:
+            bhv.set_activity(False)
 
-        # TODO: remove handlers
-        for core in self._behaviors:
-            ...
-        self._r.cancel()
+        # TODO: better way to cancel
+        self._l.cancel()
         self._active = False
 
     async def __setup(self):
         ...  # to override it
 
     @classmethod
-    def get_classes(cls):
+    def get_classes(cls) -> list[Type["Service"]]:
         subs = []
         for sub in cls.__subclasses__():
             subs.append(sub)
@@ -114,7 +130,12 @@ class Service:
     @classmethod
     async def create_instance(cls):
         self = cls()
-        await self.__setup()
+        # TODO
+        if __setup := getattr(self, f"_{self.__class__.__name__}__setup", None):
+            await __setup()  # NOTE: ensure all services were instantiated before setup
+        self._behaviors = [
+            await behavior.create_instance(self) for behavior in cls.behaviors
+        ]
         return self
 
 
@@ -125,31 +146,39 @@ class ServiceBehavior(Generic[_TService]):
     def __init_subclass__(cls):
         service_t = get_args(cls.__orig_bases__[0])[0]  # type: ignore
         assert not hasattr(service_t, "__args__")  # cann't be union
-        service_t = cast(Type[Service], service_t)
-        if not hasattr(service_t, "behaviors"):
+        assert issubclass(service_t, Service)
+        if not service_t.__dict__.get("behaviors"):
             service_t.behaviors = []
         if not cls in service_t.behaviors:
             service_t.behaviors.append(cls)
 
     def __init__(self, service: _TService):
-        cq_evt_handlers = defaultdict(list)
-        api_action_handlers = defaultdict(list)
-        for f in inspect.getmembers(self, inspect.isroutine):
-            if not (evts_t := getattr(f, "evt_entry_point", ())):
-                continue
-            for evt_t in evts_t:
-                if isinstance(evt_t, CQHTTPEvent):
-                    cq_evt_handlers[evt_t].append(f)
-                elif isinstance(evt_t, ApiAction):
-                    api_action_handlers[evt_t].append(f)
-                else:
-                    raise TypeError("WTF?!")
-        self._cq_evt_handlers: DefaultDict[
-            Type[CQHTTPEvent], list[Callable[[CQHTTPEvent], Coroutine]]
-        ] = cq_evt_handlers
-        self._api_action_handlers: DefaultDict[
-            Type[ApiAction], list[Callable[[ApiAction], Coroutine]]
-        ] = api_action_handlers
+        """ServiceBehavior cann't be instantiated directly, use ServiceBehavior.create_instance instead"""
+        cqevt_handlers = defaultdict(list)
+        act_before_handlers = defaultdict(list)
+        act_after_handlers = defaultdict(list)
+        for _, f in inspect.getmembers(self, inspect.isroutine):
+            if evt_ts := getattr(f, "cqevt_entrypoint", None):
+                for evt_t in evt_ts:
+                    if issubclass(evt_t, CQHTTPEvent):
+                        cqevt_handlers[evt_t].append(f)
+            elif evt_ts := getattr(f, "act_before_entrypoint", None):
+                for evt_t in evt_ts:
+                    if issubclass(evt_t, ApiAction):
+                        act_before_handlers[evt_t].append(f)
+            elif evt_ts := getattr(f, "act_after_entrypoint", None):
+                for evt_t in evt_ts:
+                    if issubclass(evt_t, ApiAction):
+                        act_after_handlers[evt_t].append(f)
+        self._cqevt_handlers: DefaultDict[
+            Type[CQHTTPEvent], List[_C_Handler]
+        ] = cqevt_handlers
+        self._act_after_handlers: DefaultDict[
+            Type[ApiAction], List[_A_Handler]
+        ] = act_after_handlers
+        self._act_before_handlers: DefaultDict[
+            Type[ApiAction], List[_B_Handler]
+        ] = act_before_handlers
         self.service = service
         self.set_activity(False)
 
@@ -159,20 +188,30 @@ class ServiceBehavior(Generic[_TService]):
     def get_activity(self):
         return self._active
 
-    async def _handle(self, evt: CQHTTPEvent | tuple[ApiAction, bool, Optional[dict]]):
+    @overload
+    async def _handle(self, evt: CQHTTPEvent):
+        ...
+
+    @overload
+    async def _handle(self, evt: _A):
+        ...
+
+    @overload
+    async def _handle(self, evt: _B):
+        ...
+
+    async def _handle(self, evt: CQHTTPEvent | _A | _B):
         if isinstance(evt, CQHTTPEvent):
-            asyncio.gather(*[f(evt) for f in self._cq_evt_handlers[evt.__class__]])
-        elif isinstance(evt, tuple):
-            e, before_post, arg = evt  # type: ignore
+            t = [asyncio.create_task(f(evt)) for f in self._cqevt_handlers[evt.__class__]]
+        else:
+            e, before_post, arg = evt
             if before_post:
-                asyncio.gather(*[f(e) for f in self._api_action_handlers[e.__class__]])
+                t = [asyncio.create_task(f(e)) for f in self._act_before_handlers[e.__class__]]
             else:
                 assert arg
-                asyncio.gather(
-                    *[f(e, arg) for f in self._api_action_handlers[e.__class__]]
-                )
-        else:
-            raise TypeError("WTF?!")
+                t = [asyncio.create_task(f(e, arg)) for f in self._act_after_handlers[e.__class__]]
+        if t:
+            await asyncio.wait(t)
 
     async def __setup(self):
         ...
@@ -180,14 +219,11 @@ class ServiceBehavior(Generic[_TService]):
     @classmethod
     async def create_instance(cls, service: _TService):
         self = cls(service)
-        await self.__setup()
+        if isinstance(self, IMessageFilter):
+            self.compile()
+        if __setup := getattr(self, f"_{self.__class__.__name__}__setup", None):
+            await __setup()
         return self
-
-
-_TCQHTTPEvent = TypeVar("_TCQHTTPEvent", bound=CQHTTPEvent)
-_TApiAction = TypeVar("_TApiAction", bound=ApiAction)
-_TServiceBehavior = TypeVar("_TServiceBehavior", bound=ServiceBehavior)
-_TResponse = TypeVar("_TResponse", bound=ResponseBase)
 
 
 class EventHub:
@@ -195,23 +231,21 @@ class EventHub:
 
 
 class CQHTTPEventHub(EventHub, Generic[_TCQHTTPEvent]):
-    _type: Tuple[_TCQHTTPEvent, ...]
+    _type: Tuple[Type[_TCQHTTPEvent], ...]
 
     def __class_getitem__(cls, item):
         cls._type = item
         return cls
 
     @staticmethod
-    def add_listener(
-        f: Callable[[_TServiceBehavior, _TCQHTTPEvent], Coroutine[None, None, None]]
-    ):
-        attr_old = getattr(f, "evt_entry_point", ())
-        attr_new: set[Type[CQHTTPEvent]] = set(*CQHTTPEventHub._type, *attr_old)
+    def add_listener(f: _C_Class_Handler):
+        attr_old = getattr(f, "cqevt_entrypoint", ())
+        attr_new: set[Type[CQHTTPEvent]] = set([*CQHTTPEventHub._type, *attr_old])
         real_types = set()
         for evt_t in attr_new:
             for e in evt_t.get_real_types():
                 real_types.add(e)
-        setattr(f, "evt_entry_point", tuple(real_types))
+        setattr(f, "cqevt_entrypoint", tuple(real_types))
         return f
 
 
@@ -219,7 +253,7 @@ _TApiActionT = TypeVar("_TApiActionT", bound=ApiAction)
 
 
 class ApiActionHub(EventHub, Generic[_TApiAction]):
-    _type: Tuple[_TApiAction, ...]
+    _type: Tuple[Type[_TApiAction], ...]
 
     def __class_getitem__(cls, item):
         cls._type = item
@@ -227,33 +261,26 @@ class ApiActionHub(EventHub, Generic[_TApiAction]):
 
     class _BeforePost(Generic[_TApiActionT]):
         @staticmethod
-        def add_listener(
-            f: Callable[[_TServiceBehavior, _TApiActionT], Coroutine[None, None, None]]
-        ):
-            attr_old = getattr(f, "evt_entry_point", ())
-            attr_new: set[Type[ApiAction]] = set(*ApiActionHub._type, *attr_old)  # type: ignore
+        def add_listener(f: _B_Class_Handler):
+            attr_old = getattr(f, "act_before_entrypoint", ())
+            attr_new: set[Type[ApiAction]] = set([*ApiActionHub._type, *attr_old])
             real_types = set()
             for evt_t in attr_new:
                 for e in evt_t.get_real_types():
                     real_types.add(e)
-            setattr(f, "evt_entry_point", tuple(real_types))
+            setattr(f, "act_before_entrypoint", tuple(real_types))
             return f
 
     class _AfterPost(Generic[_TApiActionT]):
         @staticmethod
-        def add_listener(
-            f: Callable[
-                [_TServiceBehavior, _TApiActionT, _TResponse],
-                Coroutine[None, None, None],
-            ]
-        ):
-            attr_old = getattr(f, "evt_entry_point", ())
-            attr_new: set[Type[ApiAction]] = set(*ApiActionHub._type, *attr_old)  # type: ignore
+        def add_listener(f: _A_Class_Handler):
+            attr_old = getattr(f, "act_after_entrypoint", ())
+            attr_new: set[Type[ApiAction]] = set([*ApiActionHub._type, *attr_old])
             real_types = set()
             for evt_t in attr_new:
                 for e in evt_t.get_real_types():
                     real_types.add(e)
-            setattr(f, "evt_entry_point", tuple(real_types))
+            setattr(f, "act_after_entrypoint", tuple(real_types))
             return f
 
     @staticmethod
@@ -307,19 +334,21 @@ class OnEvent(metaclass=_META):
 
 class IMessageFilter:
     entrys = []
-    entry_flags = 0
+    entry_flags = RegexFlag.NOFLAG
 
-    def __init_subclass__(cls):
-        entry = cls.entrys
-        cls.entrys = [compile(et, cls.entry_flags) for et in entry]
+    def compile(self):
+        cls = self.__class__
+        cls.entrys = [compile(et, cls.entry_flags) for et in cls.entrys]
 
-    def filter(self, evt: Message):
+    # TODO: optimize
+    def filter(self, evt: "Message") -> Match[str] | None:
         msg = evt.message
         for _entry in self.entrys:
             if match := _entry.match(msg):
-                return match.groupdict()
+                return match
 
 
+# TODO
 # def on_event(*evts_t:Type[Event]):
 #     real_types=set()
 #     for evt_t in evts_t:

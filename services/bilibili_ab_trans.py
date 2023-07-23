@@ -26,8 +26,7 @@ class BilibiliABTransCore(ServiceBehavior[BilibiliABTrans], IMessageFilter):
     async def handle(self, evt: GroupMessage):
         if r := self.filter(evt):
             group_id = evt.group_id
-            type = r.get("type", "").lower()
-            arg = r.get("arg", "")
+            type, arg = r["type"].lower(), r["arg"]
             if type == "av":
                 id = self.trans_av(arg)
             else:

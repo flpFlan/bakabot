@@ -14,7 +14,7 @@ from cqhttp.cqcode import Image
 
 
 class RandomTouHou(Service):
-    pass
+    name = "随机东方"
 
 
 class RandomTouHouCore(ServiceBehavior[RandomTouHou], IMessageFilter):
@@ -24,7 +24,7 @@ class RandomTouHouCore(ServiceBehavior[RandomTouHou], IMessageFilter):
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
-        if tag := r.get("tag", ""):
+        if tag := r["tag"]:
             tag = tag.replace("，", ",")
             tag = list(
                 map(lambda x: x.strip().lower().replace(" ", "_"), tag.split(","))
@@ -41,5 +41,5 @@ class RandomTouHouCore(ServiceBehavior[RandomTouHou], IMessageFilter):
 
     async def get_random_th(self, tag: str = ""):
         url = f"https://img.paulzzh.tech/touhou/random?type=json&site=all&size=all&tag={tag}"
-        r = Request.Sync.get_json(url, timeout=10)
+        r = await Request.get_json(url, timeout=10)
         return r["url"]

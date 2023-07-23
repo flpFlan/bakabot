@@ -1,5 +1,5 @@
 # -- stdlib --
-import os, base64, json, requests
+import os, base64, json
 from binascii import hexlify
 from Crypto.Cipher import AES
 
@@ -11,6 +11,7 @@ from services.base import OnEvent, Service, ServiceBehavior, IMessageFilter
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.cqcode import Music
+from utils.request import Request
 
 
 # -- code --
@@ -62,7 +63,7 @@ class Encrypyed:
 
 
 class SearchSong(Service):
-    pass
+    name = "点歌"
 
 
 class SearchSongCore(ServiceBehavior[SearchSong], IMessageFilter):
@@ -75,15 +76,12 @@ class SearchSongCore(ServiceBehavior[SearchSong], IMessageFilter):
             "Referer": "http://music.163.com/search/",
         }
         self.main_url = "http://music.163.com/"
-        self.session = requests.Session()
-        self.session.headers = headers
         self.ep = Encrypyed()
 
     @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if r := self.filter(evt):
-            song = r["song"]
-            id = await self.search_song(song)
+            id = await self.search_song(r["song"])
             if id is None:
                 await SendGroupMsg(evt.group_id, "啊哦Σ(⊙▽⊙，没有找到相关歌曲").do()
                 return
@@ -109,7 +107,7 @@ class SearchSongCore(ServiceBehavior[SearchSong], IMessageFilter):
             "limit": limit,
         }
         data = self.ep.search(text)
-        result = self.session.post(url, data=data).json()
+        result = await Request.post_json(url, data=data)
         if "result" not in result:
             return "error"
         elif "songCount" not in result["result"]:

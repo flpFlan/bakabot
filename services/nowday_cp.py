@@ -16,6 +16,8 @@ from utils.wrapper import Scheduled
 
 
 class NowdayCP(Service):
+    name = "今日CP"
+
     async def __setup(self):
         ACCIO.db.execute(
             "create table if not exists "
@@ -122,7 +124,7 @@ class CPWord(ServiceBehavior[NowdayCP], IMessageFilter):
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
-        word = r.get("word", "")
+        word = r.group("word")
         if not len(word) > 200:
             self.set(evt.user_id, word)
             m = f"{At(evt.user_id)}\n设置成功~"

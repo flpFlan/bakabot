@@ -1,6 +1,5 @@
 # -- stdlib --
 from collections import defaultdict
-from dataclasses import dataclass,field
 from typing import ClassVar, Type
 
 # -- third party --
@@ -9,16 +8,32 @@ from cqhttp.base import Event
 
 # -- code --
 
+
 def nested_dict():
     return defaultdict(nested_dict)
 
-@dataclass
-class CQHTTPEvent(Event):
-    classes:ClassVar[dict]=nested_dict()
+class DotDict:
+    def __init__(self, d:dict):
+        self.__model = d
 
-    post_type: str=field(kw_only=True)
-    time: int=field(kw_only=True)
-    self_id: int=field(kw_only=True)
+    def __getattr__(self, name):
+        item=self.__model.get(name) #NOTE:考虑到Optional字段，这里用get而不是下标
+        if isinstance(item, dict):
+            item=DotDict(item)
+        elif isinstance(item, list):
+            item=[DotDict(i) if isinstance(i, dict) else i for i in item]
+        setattr(self, name, item)
+        return item
+
+class CQHTTPEvent(Event, DotDict):
+    classes: ClassVar[dict] = nested_dict()
+
+    post_type: str
+    time: int
+    self_id: int
+
+    def cancel(self):
+        self.__class__ = EmptyCQHTTPEvent
 
     @staticmethod
     def register(evt):
@@ -47,14 +62,18 @@ class CQHTTPEvent(Event):
             raise Exception("post_type error")
         Event.classes.add(evt)
         return evt
-    
+
     @classmethod
-    def get_real_types(cls)->list[Type["CQHTTPEvent"]]:
+    def get_real_types(cls) -> list[Type["CQHTTPEvent"]]:
         """get sub_events that can be actually delivered by go-cqhttp"""
-        subs=[]
+        subs = []
         for sub in cls.__subclasses__():
             if sub in Event.classes:
                 subs.append(sub)
-            elif c:=sub.get_real_types():
+            elif c := sub.get_real_types():
                 subs.extend(c)
         return subs
+
+
+class EmptyCQHTTPEvent(CQHTTPEvent):
+    pass

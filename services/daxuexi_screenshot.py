@@ -13,7 +13,7 @@ from cqhttp.cqcode import Image
 
 
 class DaXueXiScreenshot(Service):
-    pass
+    name = "青年大学习截图生成"
 
 
 class ScreenshotCore(ServiceBehavior[DaXueXiScreenshot]):
@@ -31,7 +31,7 @@ class ScreenshotCore(ServiceBehavior[DaXueXiScreenshot]):
 
     async def get_screenshot(self):
         req_url = "https://qczj.h5yunban.com/qczj-youth-learning/cgi-bin/common-api/course/current"
-        response = Request.Sync.get_json(req_url)
+        response = await Request.get_json(req_url)
         url = response["result"]["uri"]
         if url.find("index.html") != -1:
             url = url.replace("index.html", "images/end.jpg")

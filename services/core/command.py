@@ -4,15 +4,13 @@ import logging
 import importlib
 from inspect import ismodule
 
-# -- third party --
 # -- own --
-from config import Administrators
 from services.base import Service
-from services.base import IMessageFilter, EventHub
-from .base import core_service
+from services.base import IMessageFilter, Service, ServiceBehavior, OnEvent
 from cqhttp.events.message import Message, GroupMessage, PrivateMessage
 from cqhttp.api.message.SendMsg import SendMsg
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+from accio import ACCIO
 
 # -- code --
 log = logging.getLogger("bot.service.command")
@@ -26,69 +24,54 @@ def reload(*args):
             importlib.reload(importlib.import_module(arg.__module__))
 
 
-class CommandCore(EventHub, IMessageFilter):
-    interested = [Message]
-    entrys = [
-        # r"^/cmd\s+(?P<cmd>[\S]+)(?P<args>(?:\s+[\S]+)+)",
-        r"^/cmd\s+(?P<cmd>[\s\S]+)",
-    ]
+class Command(Service):
+    pass
 
+
+class CommandCore(ServiceBehavior[Command], IMessageFilter):
+    entrys = [r"^/cmd\s+(?P<cmd>[\s\S]+)"]
+
+    @OnEvent[Message].add_listener
     async def handle(self, evt: Message):
-        qq = evt.user_id
-        if not qq in Administrators:
+        if not evt.user_id in ACCIO.bot.Administrators:
             return
-        if r := self.filter(evt):
-            bot = self.bot
-            commands = {"reload": reload}
+        if not (r := self.filter(evt)):
+            return
+        if isinstance(evt, GroupMessage):
 
+            def sgm(msg, group_id=evt.group_id):
+                asyncio.ensure_future(SendGroupMsg(group_id=group_id, message=msg).do())
+
+            def segm(msg, interval):
+                from services.core.whitelist import whitelist
+
+                SendGroupMsg.many(whitelist, msg).interval(interval).forget()
+
+        if isinstance(evt, PrivateMessage):
+
+            def spm(msg, qq_number=evt.sender.user_id):
+                asyncio.ensure_future(SendMsg(user_id=qq_number, message=msg).do())
+
+        cmd_raw = r["cmd"]
+        try:
+            exec(cmd_raw)
+        except Exception as e:
+            log.error("error while excute command:\n%s", e)
             if isinstance(evt, GroupMessage):
-
-                def sgm(msg, group_id=evt.group_id):
-                    asyncio.ensure_future(
-                        SendGroupMsg(group_id=group_id, message=msg).do()
-                    )
-
-                def segm(msg, interval):
-                    from services.core.whitelist import whitelist
-
-                    SendGroupMsg.many(whitelist, msg).forget(interval)
-
-            if isinstance(evt, PrivateMessage):
-
-                def spm(msg, qq_number=evt.sender.user_id):
-                    asyncio.ensure_future(SendMsg(user_id=qq_number, message=msg).do())
-
-            cmd_raw = r["cmd"]
-            try:
-                # if cmd := commands.get(cmd_raw, None):
-                #     cmd(*(eval(arg.strip()) for arg in r["args"].split()))
-                # else:
-                exec(cmd_raw)
-            except Exception as e:
-                log.error("error while excute command:\n%s", e)
-                if isinstance(evt, GroupMessage):
-                    await SendMsg(group_id=evt.group_id, message=str(e)).do()
-
-    async def close(self):
-        log.warning("Command must be on")
+                await SendMsg(group_id=evt.group_id, message=str(e)).do()
 
 
-class Catch(EventHub, IMessageFilter):
-    interested = [GroupMessage]
+class Catch(ServiceBehavior[Command], IMessageFilter):
     entrys = [r"^.catch$"]
     catch = False
 
-    async def handle(self, evt: GroupMessage):
-        if not evt.user_id in Administrators:
+    @OnEvent[Message].add_listener
+    async def handle(self, evt: Message):
+        if not evt.user_id in ACCIO.bot.Administrators:
             return
         if self.catch:
             globals()["rgs"] = evt.message
             self.catch = False
             return
-        if self.filter(evt) is not None:
+        if self.filter(evt):
             self.catch = True
-
-
-@core_service
-class Command(Service):
-    cores = [CommandCore, Catch]

@@ -19,6 +19,8 @@ exp = {"大吉": 96, "中吉": 80, "小吉": 64, "小凶": 48, "中凶": 32, "�
 
 
 class NowdayFortune(Service):
+    name = "今日运势"
+
     async def __setup(self):
         ACCIO.db.execute(
             "create table if not exists "

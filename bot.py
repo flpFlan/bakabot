@@ -1,109 +1,89 @@
 # -- stdlib --
 import asyncio
 import logging, os
-from typing import TYPE_CHECKING, Optional, cast
-from accio import ACCIO
-
-# -- third party --
+import time
+from typing import TYPE_CHECKING, Literal, Optional, TypeVar, overload
 
 # -- own --
 from adapter import CQHTTPAdapter
-from cqhttp.api.base import ApiAction
-from cqhttp.events.base import CQHTTPEvent
-from services.base import Service
-
 
 # -- code --
 if TYPE_CHECKING:
     from services.base import Service
+    from cqhttp.api.base import ApiAction, ResponseBase
+    from cqhttp.events.base import CQHTTPEvent
+
+    _TResponse = TypeVar("_TResponse", bound=ResponseBase)
 
 log = logging.getLogger("bot")
 
 
-# def sort_services(services):
-#     graph = {}
-#     for seivice in services:
-#         graph[seivice] = {
-#             "before": set(seivice.execute_before),
-#             "after": set(seivice.execute_after),
-#         }
-#         for dep in seivice.execute_before:
-#             graph[dep]["after"].add(seivice)
-#         for dep_by in seivice.execute_after:
-#             graph[dep_by]["before"].add(seivice)
-
-#     queue = [service for service, dep in graph.items() if not dep["before"]]
-#     result = []
-#     while queue:
-#         service = queue.pop(0)
-#         result.append(service)
-#         for dep_by in graph[service]["after"]:
-#             graph[dep_by]["before"].remove(service)
-#             if not graph[dep_by]["before"]:
-#                 queue.append(dep_by)
-
-#     for i, service in enumerate(result):
-#         for dep in service.execute_before:
-#             dep_idx = services.index(dep())
-#             if dep_idx >= i:
-#                 services[i], services[dep_idx] = services[dep_idx], services[i]
-#                 i = dep_idx
-#         for dep_by in service.execute_after:
-#             dep_by_index = services.index(dep_by())
-#             if dep_by_index <= i:
-#                 services[dep_by_index], services[i] = (
-#                     services[i],
-#                     services[dep_by_index],
-#                 )
-
-
 class BotBehavior:
-    def set_bot(self, bot):
-        self.bot = cast(Bot, bot)
+    def __init__(self, bot: "Bot"):
+        self.bot = bot
 
-    async def process_cqhttp_evt(self, evt: CQHTTPEvent):
-        _t = asyncio.gather(service.feed(evt) for service in self.bot.services)
+    async def process_cqhttp_evt(self, evt: "CQHTTPEvent"):
+        [service.feed(evt) for service in self.bot.services]
+
+    @overload
+    async def process_api_action(self, act: "ApiAction", is_before_post: Literal[True]):
+        ...
+
+    @overload
+    async def process_api_action(
+        self, act: "ApiAction", is_before_post: Literal[False], arg: "ResponseBase"
+    ):
+        ...
 
     async def process_api_action(
-        self, act: ApiAction, is_before_post: bool, arg: Optional[dict] = None
+        self,
+        act: "ApiAction",
+        is_before_post: bool,
+        arg: Optional["ResponseBase"] = None,
     ):
-        _t = asyncio.gather(
-            service.feed((act, is_before_post, arg)) for service in self.bot.services
-        )
+        if is_before_post:
+            p = (act, True, None)
+        else:
+            assert arg
+            p = (act, False, arg)
+        t = [asyncio.create_task(service.handle(p)) for service in self.bot.services]
+        await asyncio.wait(t)
 
-    @CQHTTPAdapter.Adapter.websocket("/event")
     async def evt_loop(self):
         while True:
             evt = await self.rev()
-            _t = asyncio.create_task(self.process_cqhttp_evt(evt))
+            from cqhttp.events.message import Message
 
-    async def rev(self) -> CQHTTPEvent:
-        return await self.bot._cqhttp.rev_evt()
+            if isinstance(evt, Message):
+                if evt.message==".r":
+                    print(time.time())
+            await self.process_cqhttp_evt(evt)
 
-    async def post_api(self, act: ApiAction):
-        await self.process_api_action(act, is_before_post=False)
-        r = await self.bot._cqhttp.api(act)
-        await self.process_api_action(act, is_before_post=True, arg=r)
+    async def rev(self) -> "CQHTTPEvent":
+        return await self.bot.cqhttp.rev_evt()
+
+    async def post_api(self, act: "ApiAction[_TResponse]") -> "_TResponse":
+        await self.process_api_action(act, is_before_post=True)
+        r = await self.bot.cqhttp.api(act)
+        await self.process_api_action(act, is_before_post=False, arg=r)
         return r
 
 
 class Bot:
-    # private
-    _behavior = BotBehavior()
-    _cqhttp = CQHTTPAdapter()
-
     def __init__(self, name: str, qq_number: int):
-        self._behavior.set_bot(self)
         self.name = name
         self.qq_number = qq_number
         self.is_running = False
-        self.services: list[Service] = []
+        self.services: list["Service"] = []
 
-    def run(self, host: str, port: int):
-        self._cqhttp.run_at(host, int(port))
+    async def run(self, host: str, port: int):
+        await self.cqhttp.run(host, int(port))
 
-    async def set_up(self):
+    async def setup(self):
         log.info("%s loading..." % self.name)
+
+        self.behavior = BotBehavior(self)
+        self.cqhttp = CQHTTPAdapter()
 
         # init database
         if not os.path.exists("src/db"):
@@ -117,6 +97,12 @@ class Bot:
         )
 
         # init services
+        from services.base import Service
+
+        # NOTE: don't use asyncio.gather, to delay __setup
+        g = [await s.create_instance() for s in Service.get_classes()]
+        self.services.extend(g)
+
         for s in self.services:
             db.execute(
                 "select ifnull((select service_on from services where service = ?),true)",
@@ -124,21 +110,28 @@ class Bot:
             )
             state = db.fatchone()
             if state[0]:
-                await s.start_up()
+                await s.start()
 
         # init src
         if not os.path.exists("src/temp"):
             os.makedirs("src/temp")
 
+        # other
+        self.SUPERUSER = ACCIO.conf.getint("Bot", "superuser")
+        self.Administrators: list[int] = eval(ACCIO.conf.get("Bot", "administrators"))
+
         self.is_running = True
         log.info("%s start up!" % self.name)
 
     async def stop(self):
-        if not self.is_running:
-            log.warning("already closed")
-            return
+        raise Exception("can't stop")
+        # if not self.is_running:
+        #     log.warning("already closed")
+        #     return
 
-        await self._cqhttp.shutdown()
-        await ACCIO.db.close()
-        self.is_running = False
-        log.info("%s closed!" % self.name)
+        # await self._cqhttp.shutdown()
+        # from accio import ACCIO
+
+        # await ACCIO.db.close()
+        # self.is_running = False
+        # log.info("%s closed!" % self.name)

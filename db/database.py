@@ -1,17 +1,15 @@
 # -- stdlib --
 import sqlite3
-from typing import cast
-
-# -- third party --
-# -- own --
-from bot import Bot
+from typing import TYPE_CHECKING
 
 # -- code --
+if TYPE_CHECKING:
+    from bot import Bot
 
 
 class DataBase:
-    def set_bot(self, bot):
-        self.bot = cast(Bot, bot)
+    def set_bot(self, bot: "Bot"):
+        self.bot = bot
 
     async def connect(self, db: str = ""):
         db = db or self.bot.name + ".db"
