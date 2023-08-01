@@ -217,7 +217,7 @@ class Foo(Service):
 
 class Bar(ServiceBehavior[Foo]):
 
-  @OnEvent[GroupMessage.add_listener]
+  @OnEvent[GroupMessage].add_listener
   async def bar(evt:GroupMessage):
     if evt.message == "Hello"
       await SendGroupMsg(evt.group_id, "World!").do()
