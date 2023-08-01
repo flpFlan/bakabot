@@ -33,7 +33,7 @@ class OnFriendGroupCore(ServiceBehavior[OnFriendGroup]):
     async def on_member_decreased(self, evt: GroupMemberDecreased):
         if not evt.user_id == ACCIO.bot.qq_number:
             return
-        WhiteList.instance.delete(evt.group_id)
+        await WhiteList.instance.delete(evt.group_id)
         m = f"{ACCIO.bot.name}已退出群聊\ngroup:\n{evt.group_id}\noperator:\n{evt.operator_id}"
 
         SendPrivateMsg.many(ACCIO.bot.Administrators, m).forget()

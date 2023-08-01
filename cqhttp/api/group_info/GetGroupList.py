@@ -1,10 +1,10 @@
 """获取群列表"""
 from dataclasses import dataclass, field
 from cqhttp.api.base import ApiAction,  ResponseBase
-from cqhttp.api.group_info.GetGroupInfo import Response as Res
+from cqhttp.api.group_info.GetGroupInfo import Data
 
 class Response(ResponseBase):
-    data: list[Res]
+    data: list[Data]
 
 
 @ApiAction.register

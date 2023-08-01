@@ -48,7 +48,7 @@ class CommandCore(ServiceBehavior[Command], IMessageFilter):
 
                 l = await GetGroupList().do()
                 for i in l["data"]:
-                    if (group_id := i["data"]["group_id"]) not in whitelist:
+                    if (group_id := i["group_id"]) not in whitelist:
                         await SetGroupLeave(group_id).do()
 
             asyncio.create_task(clear())
