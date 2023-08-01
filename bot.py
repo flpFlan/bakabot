@@ -1,7 +1,6 @@
 # -- stdlib --
 import asyncio
 import logging, os
-import time
 from typing import TYPE_CHECKING, Literal, Optional, TypeVar, overload
 
 # -- own --
@@ -23,7 +22,8 @@ class BotBehavior:
         self.bot = bot
 
     async def process_cqhttp_evt(self, evt: "CQHTTPEvent"):
-        [service.feed(evt) for service in self.bot.services]
+        for service in self.bot.services:
+            await service.handle(evt)
 
     @overload
     async def process_api_action(self, act: "ApiAction", is_before_post: Literal[True]):
@@ -46,18 +46,13 @@ class BotBehavior:
         else:
             assert arg
             p = (act, False, arg)
-        t = [asyncio.create_task(service.handle(p)) for service in self.bot.services]
-        await asyncio.wait(t)
+        for service in self.bot.services:
+            await service.handle(p)
 
     async def evt_loop(self):
         while True:
             evt = await self.rev()
-            from cqhttp.events.message import Message
-
-            if isinstance(evt, Message):
-                if evt.message==".r":
-                    print(time.time())
-            await self.process_cqhttp_evt(evt)
+            _t = asyncio.create_task(self.process_cqhttp_evt(evt))
 
     async def rev(self) -> "CQHTTPEvent":
         return await self.bot.cqhttp.rev_evt()
@@ -76,8 +71,11 @@ class Bot:
         self.is_running = False
         self.services: list["Service"] = []
 
-    async def run(self, host: str, port: int):
-        await self.cqhttp.run(host, int(port))
+    async def run_forever(self):
+        while True:
+            await self.cqhttp.run()
+            log.error("adapter exceptionly shutdown")
+            await asyncio.sleep(1)
 
     async def setup(self):
         log.info("%s loading..." % self.name)
@@ -92,7 +90,7 @@ class Bot:
 
         db = ACCIO.db
         await db.connect("src/db/%s.db" % self.name)
-        db.execute(
+        await db.execute(
             "create table if not exists services (service text primary key,service_on bool)"
         )
 
@@ -104,12 +102,12 @@ class Bot:
         self.services.extend(g)
 
         for s in self.services:
-            db.execute(
+            await db.execute(
                 "select ifnull((select service_on from services where service = ?),true)",
                 (s.__class__.__name__,),
             )
-            state = db.fatchone()
-            if state[0]:
+            state = await db.fatchone()
+            if state and state[0]:
                 await s.start()
 
         # init src

@@ -29,6 +29,6 @@ class NowdayNewsCore(ServiceBehavior[NowdayNews]):
     async def get_everyday_news(self):
         url = "http://bjb.yunwj.top/php/tp/1.jpg"
         with open(r".\src\temp\nowday_news_temp.png", "wb") as file:
-            for i in Request.Sync.get_iter_content(url):
+            async for i in Request.get_iter_content(url):
                 file.write(i)
             file.close()

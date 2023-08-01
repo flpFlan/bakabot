@@ -1,329 +1,329 @@
 from dataclasses import dataclass, field
-from typing import Optional
-from .base import CQCode, register_to_cqcodes
+from typing import ClassVar, Optional
+from .base import CQCode, CQCodeData, register_to_cqcodes
 
 
 @dataclass(repr=False)
-class Face:
+class _FaceData(CQCodeData):
+    cq: ClassVar[str] = "face"
     id: int
-    cq = "face"
 
 
 @register_to_cqcodes
-class Face(Face, CQCode[Face]):
+class Face(_FaceData, CQCode[_FaceData]):
     """QQ 表情"""
 
 
 @dataclass(repr=False)
-class Record:
-    file: str
+class _RecordData(CQCodeData):
+    cq: ClassVar[str] = "record"
+    file: str = field()
     url: str = field(init=False)
-    magic: int = 0
-    cache: int = 1
-    proxy: int = 1
-    timeout: Optional[int] = None
-    cq = "record"
+    magic: int = field(default=0)
+    cache: int = field(default=1)
+    proxy: int = field(default=1)
+    timeout: Optional[int] = field(default=None)
 
 
 @register_to_cqcodes
-class Record(Record, CQCode[Record]):
+class Record(_RecordData, CQCode[_RecordData]):
     """语音"""
 
 
 @dataclass(repr=False)
-class Video:
-    file: str
-    cover: str
-    c: Optional[int] = None
-    cq = "video"
+class _VideoData(CQCodeData):
+    cq: ClassVar[str] = "video"
+    file: str = field()
+    cover: str = field()
+    c: Optional[int] = field(default=None)
 
 
 @register_to_cqcodes
-class Video(Video, CQCode[Video]):
+class Video(_VideoData, CQCode[_VideoData]):
     """短视频"""
 
 
 @dataclass(repr=False)
-class At:
-    qq: int
+class _AtData(CQCodeData):
+    cq: ClassVar[str] = "at"
+    qq: int = field()
     name: str = field(init=False)
-    cq = "at"
 
 
 @register_to_cqcodes
-class At(At, CQCode[At]):
+class At(_AtData, CQCode[_AtData]):
     """@某人"""
 
 
 @dataclass(repr=False)
-class RPS:
-    cq = "rps"
+class _RPSData(CQCodeData):
+    cq: ClassVar[str] = "rps"
 
 
 @register_to_cqcodes
-class RPS(RPS, CQCode[RPS]):
+class RPS(_RPSData, CQCode[_RPSData]):
     """猜拳魔法表情"""
 
 
 @dataclass(repr=False)
-class Dice:
-    cq = "dice"
+class _DiceData(CQCodeData):
+    cq: ClassVar[str] = "dice"
 
 
 @register_to_cqcodes
-class Dice(Dice, CQCode[Dice]):
+class Dice(_DiceData, CQCode[_DiceData]):
     """掷骰子魔法表情"""
 
 
 @dataclass(repr=False)
-class Shake:
-    cq = "shake"
+class _ShakeData(CQCodeData):
+    cq: ClassVar[str] = "shake"
 
 
 @register_to_cqcodes
-class Shake(Shake, CQCode[Shake]):
+class Shake(_ShakeData, CQCode[_ShakeData]):
     """窗口抖动（戳一戳）"""
 
 
 @dataclass(repr=False)
-class Anonymous:
-    ignore: Optional[int] = None
-    cq = "anonymous"
+class _AnonymousData(CQCodeData):
+    cq: ClassVar[str] = "anonymous"
+    ignore: Optional[int] = field(default=None)
 
 
 @register_to_cqcodes
-class Anonymous(Anonymous, CQCode[Anonymous]):
+class Anonymous(_AnonymousData, CQCode[_AnonymousData]):
     """匿名发消息"""
 
 
 @dataclass(repr=False)
-class Share:
-    url: str
-    title: str
-    content: Optional[str] = None
-    image: Optional[str] = None
-    cq = "share"
+class _ShareData(CQCodeData):
+    cq: ClassVar[str] = "share"
+    url: str = field()
+    title: str = field()
+    content: Optional[str] = field(default=None)
+    image: Optional[str] = field(default=None)
 
 
 @register_to_cqcodes
-class Share(Share, CQCode[Share]):
+class Share(_ShareData, CQCode[_ShareData]):
     """链接分享"""
 
 
 @dataclass(repr=False)
-class Contact:
-    type: str
-    id: str
-    cq = "contact"
+class _ContactData(CQCodeData):
+    cq: ClassVar[str] = "contact"
+    type: str = field()
+    id: str = field()
 
 
 @register_to_cqcodes
-class Contact(Contact, CQCode[Contact]):
+class Contact(_ContactData, CQCode[_ContactData]):
     """推荐好友/群"""
 
 
 @dataclass(repr=False)
-class Location:
-    lat: str
-    lon: str
-    title: Optional[str] = None
-    content: Optional[str] = None
-    cq = "location"
+class _LocationData(CQCodeData):
+    cq: ClassVar[str] = "location"
+    lat: str = field()
+    lon: str = field()
+    title: Optional[str] = field(default=None)
+    content: Optional[str] = field(default=None)
 
 
 @register_to_cqcodes
-class Location(Location, CQCode[Location]):
+class Location(_LocationData, CQCode[_LocationData]):
     """位置"""
 
 
 @dataclass(repr=False)
-class Music:
-    type: str
-    id: int
-    cq = "music"
+class _MusicData(CQCodeData):
+    cq: ClassVar[str] = "music"
+    type: str = field()
+    id: int = field()
 
 
 @register_to_cqcodes
-class Music(Music, CQCode[Music]):
+class Music(_MusicData, CQCode[_MusicData]):
     """音乐分享"""
 
 
 @dataclass(repr=False)
-class MusicCustom:
-    url: str
-    audio: str
-    title: str
-    content: Optional[str] = None
-    image: Optional[str] = None
-    type: str = "custom"
-    cq = "music"
+class _MusicCustomData(CQCodeData):
+    cq: ClassVar[str] = "music"
+    url: str = field()
+    audio: str = field()
+    title: str = field()
+    content: Optional[str] = field(default=None)
+    image: Optional[str] = field(default=None)
+    type: str = field(default="custom")
 
 
 @register_to_cqcodes
-class MusicCustom(MusicCustom, CQCode[MusicCustom]):
+class MusicCustom(_MusicCustomData, CQCode[_MusicCustomData]):
     """音乐自定义分享"""
 
 
 @dataclass(repr=False)
-class Image:
-    file: str
-    type: Optional[str] = None
-    subType: Optional[int] = None
-    url: Optional[str] = None
-    cache: int = 1
-    id: Optional[int] = None
-    c: Optional[int] = None
-    cq = "iamge"
+class _ImageData(CQCodeData):
+    cq: ClassVar[str] = "image"
+    file: str = field()
+    type: Optional[str] = field(default=None)
+    subType: Optional[int] = field(default=None)
+    url: Optional[str] = field(default=None)
+    cache: int = field(default=1)
+    id: Optional[int] = field(default=None)
+    c: Optional[int] = field(default=None)
 
 
 @register_to_cqcodes
-class Image(Image, CQCode[Image]):
+class Image(_ImageData, CQCode[_ImageData]):
     """图片"""
 
 
 @dataclass(repr=False)
-class Reply:
-    id: int
-    seq: Optional[int] = None
-    cq = "reply"
+class _ReplyData(CQCodeData):
+    cq: ClassVar[str] = "reply"
+    id: int = field()
+    seq: Optional[int] = field(default=None)
 
 
 @register_to_cqcodes
-class Reply(Reply, CQCode[Reply]):
+class Reply(_ReplyData, CQCode[_ReplyData]):
     """回复"""
 
 
 @dataclass(repr=False)
-class ReplyCustom:
-    text: str
-    qq: int
-    time: int
-    seq: Optional[int] = None
-    cq = "reply"
+class _ReplyCustomData(CQCodeData):
+    cq: ClassVar[str] = "reply"
+    text: str = field()
+    qq: int = field()
+    time: int = field()
+    seq: Optional[int] = field(default=None)
 
 
 @register_to_cqcodes
-class ReplyCustom(ReplyCustom, CQCode[ReplyCustom]):
+class ReplyCustom(_ReplyCustomData, CQCode[_ReplyCustomData]):
     """自定义回复"""
 
 
 @dataclass(repr=False)
-class RedBag:
-    title: str
-    cq = "redbag"
+class _RedBagData(CQCodeData):
+    cq: ClassVar[str] = "redbag"
+    title: str = field()
 
 
 @register_to_cqcodes
-class RedBag(RedBag, CQCode[RedBag]):
+class RedBag(_RedBagData, CQCode[_RedBagData]):
     """红包"""
 
 
 @dataclass(repr=False)
-class Poke:
-    qq: int
-    cq = "poke"
+class _PokeData(CQCodeData):
+    cq: ClassVar[str] = "poke"
+    qq: int = field()
 
 
 @register_to_cqcodes
-class Poke(Poke, CQCode[Poke]):
+class Poke(_PokeData, CQCode[_PokeData]):
     """戳一戳"""
 
 
 @dataclass(repr=False)
-class Gift:
-    qq: int
-    id: int
-    cq = "gift"
+class _GiftData(CQCodeData):
+    cq: ClassVar[str] = "gift"
+    qq: int = field()
+    id: int = field()
 
 
 @register_to_cqcodes
-class Gift(Gift, CQCode[Gift]):
+class Gift(_GiftData, CQCode[_GiftData]):
     """礼物"""
 
 
 @dataclass(repr=False)
-class Forward:
-    id: str
-    cq = "forward"
+class _ForwardData(CQCodeData):
+    cq: ClassVar[str] = "forward"
+    id: str = field()
 
 
 @register_to_cqcodes
-class Forward(Forward, CQCode[Forward]):
+class Forward(_ForwardData, CQCode[_ForwardData]):
     """合并转发"""
 
 
 @dataclass(repr=False)
-class Node:
-    id: int
-    cq = "node"
+class _NodeData(CQCodeData):
+    cq: ClassVar[str] = "node"
+    id: int = field()
 
 
 @register_to_cqcodes
-class Node(Node, CQCode[Node]):
+class Node(_NodeData, CQCode[_NodeData]):
     """合并转发消息节点"""
 
 
 @dataclass(repr=False)
-class NodeCustom:
-    name: str
-    uin: int
-    content: Optional[str] = None
-    seq: Optional[str] = None
-    cq = "node"
+class _NodeCustomData(CQCodeData):
+    cq: ClassVar[str] = "node"
+    name: str = field()
+    uin: int = field()
+    content: Optional[str] = field(default=None)
+    seq: Optional[str] = field(default=None)
 
 
 @register_to_cqcodes
-class NodeCustom(NodeCustom, CQCode[NodeCustom]):
+class NodeCustom(_NodeCustomData, CQCode[_NodeCustomData]):
     """合并转发消息节点(自定义)"""
 
 
 @dataclass(repr=False)
-class XML:
-    data: str
-    resid: Optional[int] = None
-    cq = "xml"
+class _XMLData(CQCodeData):
+    cq: ClassVar[str] = "xml"
+    data: str = field()
+    resid: Optional[int] = field(default=None)
 
 
 @register_to_cqcodes
-class XML(XML, CQCode[XML]):
+class XML(_XMLData, CQCode[_XMLData]):
     """XML 消息"""
 
 
 @dataclass(repr=False)
-class Json:
-    data: str
-    resid: Optional[int] = None
-    cq = "json"
+class _JsonData(CQCodeData):
+    cq: ClassVar[str] = "json"
+    data: str = field()
+    resid: Optional[int] = field(default=None)
 
 
 @register_to_cqcodes
-class Json(Json, CQCode[Json]):
+class Json(_JsonData, CQCode[_JsonData]):
     """JSON 消息"""
 
 
 @dataclass(repr=False)
-class CardImage:
-    file: str
-    minwidth: Optional[int] = None
-    minheight: Optional[int] = None
-    maxwidth: Optional[int] = None
-    maxheight: Optional[int] = None
-    source: Optional[str] = None
-    icon: Optional[str] = None
-    cq = "cardimage"
+class _CardImageData(CQCodeData):
+    cq: ClassVar[str] = "cardimage"
+    file: str = field()
+    minwidth: Optional[int] = field(default=None)
+    minheight: Optional[int] = field(default=None)
+    maxwidth: Optional[int] = field(default=None)
+    maxheight: Optional[int] = field(default=None)
+    source: Optional[str] = field(default=None)
+    icon: Optional[str] = field(default=None)
 
 
 @register_to_cqcodes
-class CardImage(CardImage, CQCode[CardImage]):
+class CardImage(_CardImageData, CQCode[_CardImageData]):
     """cardimage"""
 
 
 @dataclass(repr=False)
-class TTS:
-    text: str
-    cq = "tts"
+class _TTSData(CQCodeData):
+    cq: ClassVar[str] = "tts"
+    text: str = field()
 
 
 @register_to_cqcodes
-class TTS(TTS, CQCode[TTS]):
+class TTS(_TTSData, CQCode[_TTSData]):
     """文本转语音"""

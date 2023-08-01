@@ -40,13 +40,16 @@ class OnFriendGroupCore(ServiceBehavior[OnFriendGroup]):
 
 
 class OnFriendGroupEcho(ServiceBehavior[OnFriendGroup]):
+    async def __setup(self):
+        self.staff=ACCIO.conf.getint("Service.OnFriendGroupEcho", "staff")
+
     @OnEvent[GroupMemberIncreased, FriendAdded].add_listener
     async def handle(self, evt: GroupMemberIncreased | FriendAdded):
         if isinstance(evt, GroupMemberIncreased):
             if not evt.user_id == ACCIO.bot.qq_number:
                 return
-            m = f"想让妾身为您服务的话，请联系{At(2104357372)}获取白名单"
+            m = f"想让妾身为您服务的话，请联系{At(self.staff)}获取白名单"
             await SendMsg(group_id=evt.group_id, message=m).do()
         elif isinstance(evt, FriendAdded):
-            m = "想让妾身为您服务的话，请邀请妾身到相关的群内，并联系master (2104357372)获取白名单"
+            m = f"想让妾身为您服务的话，请邀请妾身到相关的群内，并联系{self.staff}获取白名单"
             await SendMsg(user_id=evt.user_id, message=m).do()

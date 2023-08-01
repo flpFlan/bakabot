@@ -1,11 +1,11 @@
 # -- stdlib --
 import json
 import logging
-import time
+import asyncio
 from typing import cast
 
 # -- third party --
-import redis
+import redis.asyncio as redis
 
 # -- own --
 from services.base import Service, ServiceBehavior
@@ -14,8 +14,6 @@ from accio import ACCIO
 
 
 # -- code --
-URL = "redis://localhost:6379"
-
 log = logging.getLogger("bot.service.thbMessage")
 thb_notify_groups = set()
 
@@ -32,69 +30,63 @@ ServerNames = {
 
 class THBMessageNotify(Service):
     async def __setup(self):
-        ACCIO.db.execute(
+        await ACCIO.db.execute(
             "create table if not exists thb_notify_groups (group_id integer unique)"
         )
         global thb_notify_groups
-        self.thb_notify_groups = thb_notify_groups = self.get_notify_group()
+        self.thb_notify_groups = thb_notify_groups = await self.get_notify_group()
 
-    def get_notify_group(self) -> set[int]:
-        ACCIO.db.execute("select group_id from thb_notify_groups")
-        result = ACCIO.db.fatchall()
+    async def get_notify_group(self) -> set[int]:
+        await ACCIO.db.execute("select group_id from thb_notify_groups")
+        result = await ACCIO.db.fatchall()
         return set(group[0] for group in result)
 
-    def add_notify_group(self, group_id: int):
+    async def add_notify_group(self, group_id: int):
         if group_id in self.thb_notify_groups:
             return
 
-        ACCIO.db.execute(
+        await ACCIO.db.execute(
             f"insert into thb_notify_groups (group_id) values (?)",
             (group_id,),
         )
         self.thb_notify_groups.add(group_id)
 
-    def del_notify_group(self, group_id: int):
+    async def del_notify_group(self, group_id: int):
         if group_id not in self.thb_notify_groups:
             return
-        ACCIO.db.execute(
+        await ACCIO.db.execute(
             "delete from thb_notify_groups where group_id = ?", (group_id,)
         )
         self.thb_notify_groups.remove(group_id)
 
 
-# TODO
 class THBMessageNotifyCore(ServiceBehavior[THBMessageNotify]):
     async def __setup(self):
-        return
-        self.sub = sub = redis.from_url(URL).pubsub()
-        sub.psubscribe("thb.*")
+        url = ACCIO.conf.get("Service.THBMessageNotify", "url")
+        self.sub = sub = redis.from_url(url).pubsub()
+        await sub.psubscribe("thb.*")
+        self.l = asyncio.create_task(self.loop())
+        self.service.OnBeforeShutDown += self.on_shutdown
 
-        self.flag = False
-        from threading import Thread
+    async def on_shutdown(self):
+        self.l.cancel()
 
-        self.thread = thread = Thread(target=self.loop, name="thb_message_notify")
-        thread.start()
+    async def loop(self):
+        try:
+            async for msg in self.sub.listen():
+                if msg["type"] not in ("message", "pmessage"):
+                    continue
 
-    def loop(self):
-        while not self.flag:
-            try:
-                for msg in self.sub.listen():
-                    if self.flag:
-                        return
-                    if msg["type"] not in ("message", "pmessage"):
-                        continue
+                _, node, topic = msg["channel"].split(b".")[:3]
+                if not topic == b"speaker":
+                    continue
+                message = json.loads(msg["data"])
 
-                    _, node, topic = msg["channel"].split(b".")[:3]
-                    if not topic == b"speaker":
-                        continue
-                    message = json.loads(msg["data"])
-
-                    self.on_message(node, message)
-            except Exception as e:
-                log.error(e)
-
-            finally:
-                time.sleep(1)
+                self.on_message(node, message)
+        except Exception as e:
+            log.error(e)
+        finally:
+            await asyncio.sleep(1)
 
     def on_message(self, node, message):
         username, content = message
@@ -116,8 +108,4 @@ class THBMessageNotifyCore(ServiceBehavior[THBMessageNotify]):
             content,
         )
         service = cast(THBMessageNotify, self.service)
-        SendGroupMsg.many(service.thb_notify_groups, send).forget(interval=1)
-
-    def close(self):
-        super().close()
-        self.flag = True
+        SendGroupMsg.many(service.thb_notify_groups, send).interval(1).forget()

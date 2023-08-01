@@ -12,8 +12,8 @@ from cqhttp.cqcode import Image
 from accio import ACCIO
 
 # -- code --
-PID_PATH = ACCIO.conf.get("Pid", "path")
-PID_URL = ACCIO.conf.get("Pid", "url")
+PID_PATH = ACCIO.conf.get("Service.Pid", "path")
+PID_URL = ACCIO.conf.get("Service.Pid", "url")
 
 
 class Pid(Service):

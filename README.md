@@ -1,46 +1,51 @@
 BakaBot
 ==========
-Requrement
+前置需求
 ----------
-- python 3.11
+- python >=3.11
 - poetry
 - [go-cqhttp](https://github.com/Mrs4s/go-cqhttp)
 
-Install
-----------
-- run at shell
-
+命令行里运行
 ```
 poetry install
 ```
 
-How to use
+配置
 -----------
-1. Add your bot to `Bots` in [config.py](config.py)
+在[config.ini](config.ini)里修改参数
 
-2. Modify in the `Endpoints` with endpoint exactly matching your bot
+```ini
+[Bot]
+# bot昵称(与qq昵称无关，仅作代号使用)
+name = BAKA
+# QQ号
+qq = 123456789
+# bot所有者，最好填你自己的QQ
+superuser = 987654321
+# bot管理员，可以填多位，但必须填上你自己
+administrators = [987654321]
 
-3. Alter the [options.py](options.py) if nessasary
-
-here gives a sample:
-
-```python
-Administrators = [123456789]
-
-Bots: list[Bot] = [Bot("BAKA", 2777777777)]
-
-Endpoints = {"BAKA": "localhost:2333"}
+[Bot.Adapter]
+# 与go-cqhttp配置相同, 注意使用正向websocket通信
+endpoint = localhost:2333 
 ```
 
-4. run [go-cqhttp](https://github.com/Mrs4s/go-cqhttp)
+运行
+-----------
+1. 首先运行 [go-cqhttp](https://github.com/Mrs4s/go-cqhttp)
 
-5. run [start_bot.py](start_bot.py)
+2. 命令行里运行
+
+```shell
+poetry run python ./start_bot.py
+```
 
 Go-CQHTTP
 ==========
 config.yml
 ----------
-for reference only:
+配置参考:
 
 ```
 # go-cqhttp 默认配置文件
@@ -147,7 +152,7 @@ servers:
         <<: *default # 引用默认中间件
 ```
 
-Main Functions
+主要功能
 ========
 
 Services
@@ -181,7 +186,7 @@ Services
 
 Games
 --------
-usage: /game + name of game, for example:
+用例: /game + 关键词:
 
 ```
 /game Akinator
@@ -191,3 +196,27 @@ usage: /game + name of game, for example:
 - [ ] 五子棋
 - [ ] 扫雷
 - [x] [Akinator](https://github.com/Infiniticity/akinator.py)
+
+扩展
+--------
+用例
+
+```python
+from services.base import Service, ServiceBehavior, OnEvent
+from cqhttp.events.message import GroupMessage
+from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+
+class Foo(Service):
+  pass
+
+class Bar(ServiceBehavior[Foo]):
+
+  @OnEvent[GroupMessage.add_listener]
+  async def bar(evt:GroupMessage):
+    if evt.message == "Hello"
+      await SendGroupMsg(evt.group_id, "World!").do()
+      # 可选的非阻塞形式:
+      # SendGroupMsg(evt.group_id, "World!").forget()
+```
+
+具体可参考services目录下任一service

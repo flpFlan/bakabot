@@ -1,5 +1,5 @@
 # -- stdlib --
-import sqlite3
+import aiosqlite
 from typing import TYPE_CHECKING
 
 # -- code --
@@ -13,35 +13,35 @@ class DataBase:
 
     async def connect(self, db: str = ""):
         db = db or self.bot.name + ".db"
-        self.connection = conn = sqlite3.connect(db)
-        self.cursor = conn.cursor()
+        self.connection = conn = await aiosqlite.connect(db)
+        self.cursor = await conn.cursor()
 
     async def close(self):
         assert self.connection
-        self.connection.close()
+        await self.connection.close()
         self.connection = None
         self.cursor = None
 
-    def execute(self, sql: str, params=None):
+    async def execute(self, sql: str, params=None):
         assert self.cursor
         if params:
-            self.cursor.execute(sql, params)
+            await self.cursor.execute(sql, params)
         else:
-            self.cursor.execute(sql)
-        self.commit()
+            await self.cursor.execute(sql)
+        await self.commit()
 
-    def fatchall(self):
+    async def fatchall(self):
         assert self.cursor
-        return self.cursor.fetchall()
+        return await self.cursor.fetchall()
 
-    def fatchmany(self, size: int | None = 1):
+    async def fatchmany(self, size: int | None = 1):
         assert self.cursor
-        return self.cursor.fetchmany(size)
+        return await self.cursor.fetchmany(size)
 
-    def fatchone(self):
+    async def fatchone(self):
         assert self.cursor
-        return self.cursor.fetchone()
+        return await self.cursor.fetchone()
 
-    def commit(self):
+    async def commit(self):
         assert self.connection
-        self.connection.commit()
+        await self.connection.commit()

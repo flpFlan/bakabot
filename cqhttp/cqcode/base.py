@@ -8,33 +8,22 @@ from utils.algorithm import first
 
 
 @dataclass(repr=False)
-class _CQCode:
-    cq: str = ""
+class CQCodeData:
+    cq: ClassVar[str]
 
 
-_CQ = TypeVar("_CQ", bound=_CQCode)
+_CQ = TypeVar("_CQ", bound=CQCodeData)
 
-#TODO: fix __init__
-class CQCode(_CQCode, Generic[_CQ]):
+
+class CQCode(CQCodeData, Generic[_CQ]):
     classes: ClassVar[set[Type["CQCode"]]] = set()
-
-    pattern: re.Pattern[str]
+    pattern: ClassVar[re.Pattern[str]]
 
     def __init_subclass__(cls):
         cq = cls.cq or r"[^\d\s]+?"
         cls.pattern = re.compile(
             rf"\[CQ:{cq},(?P<params>(?:[^\d\s\[\]]+=[^,\s\[\]]+)+?)\]"
         )
-        params = ",".join(getfullargspec(cls.__init__).args)  # type: ignore
-        env = {"i": cls.__init__}  # type: ignore
-        code = f"""
-def __init__({params},**kargs):
-    i({params})               
-    for k,v in kargs.items(): 
-        setattr(self,k,v)
-""".strip()
-        exec(code, env)
-        cls.__init__ = env["__init__"]  # type: ignore
 
     @classmethod
     def select_from(cls, msg: str | Message) -> list[_CQ] | None:
@@ -63,7 +52,8 @@ def __init__({params},**kargs):
         return False
 
     def __str__(self) -> str:
-        if params := (f"{k}={v}" if v else "" for k, v in vars(self).items()):
+        params = (f"{k}={v}" if v is not None else "" for k, v in vars(self).items())
+        if params := list(filter(lambda x: x != "", params)):
             params = ",".join(params)
             return f"[CQ:{self.cq},{params}]"
         else:

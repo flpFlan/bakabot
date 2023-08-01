@@ -67,6 +67,8 @@ class CQHTTPEvent(Event, DotDict):
     def get_real_types(cls) -> list[Type["CQHTTPEvent"]]:
         """get sub_events that can be actually delivered by go-cqhttp"""
         subs = []
+        if cls in Event.classes:
+            subs.append(cls)
         for sub in cls.__subclasses__():
             if sub in Event.classes:
                 subs.append(sub)

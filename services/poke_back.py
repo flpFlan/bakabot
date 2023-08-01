@@ -5,7 +5,7 @@ from services.base import Service, ServiceBehavior, OnEvent
 from cqhttp.events.notice import GroupPoked
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.wrapper import cool_down_for
-from cqhttp.cqcode import At
+from cqhttp.cqcode import Poke
 from accio import ACCIO
 
 # -- code --
@@ -24,6 +24,6 @@ class PokeBackCore(ServiceBehavior[PokeBack]):
 
     @cool_down_for(2)
     async def pokeback(self, evt: GroupPoked):
-        m = f"{At(evt.user_id)}"
+        m = f"{Poke(evt.user_id)}"
 
         await SendGroupMsg(evt.group_id, m).do()

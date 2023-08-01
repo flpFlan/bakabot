@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, get_args, overload, DefaultDict
 from accio import ACCIO
 from cqhttp.api.base import ApiAction, ResponseBase
 from cqhttp.events.base import CQHTTPEvent
+from utils.core_event import CoreEvent
 
 # -- code --
 
@@ -62,6 +63,9 @@ class Service:
         self._behaviors: list[ServiceBehavior[Self]] = []
         self._evt_queue: Queue[CQHTTPEvent | _A | _B] = Queue()
         self._active = False
+        self.OnSetupFinished = CoreEvent()
+        self.OnAfterStart = CoreEvent()
+        self.OnBeforeShutDown = CoreEvent()
 
     def feed(self, evt: CQHTTPEvent | _A | _B):
         if self._active:
@@ -73,6 +77,8 @@ class Service:
             _t = asyncio.create_task(self.handle(evt))
 
     async def handle(self, evt: CQHTTPEvent | _A | _B):
+        if not self._active:
+            return
         for behavior in self._behaviors:  # NOTE: must be sync
             if behavior.get_activity():
                 await behavior._handle(evt)
@@ -89,7 +95,7 @@ class Service:
     async def start(self):
         db = ACCIO.db
         service = self.__class__.__name__
-        db.execute(
+        await db.execute(
             """
             insert or replace into services (service,service_on) values (?,?)
             """,
@@ -98,21 +104,17 @@ class Service:
         for bhv in self._behaviors:
             bhv.set_activity(True)
 
-        self._l = asyncio.create_task(self.loop())
         self._active = True
+        await self.OnAfterStart.invoke()
 
     async def shutdown(self):
-        db = ACCIO.db
-        service = self.__class__.__name__
-        db.execute(
+        await self.OnBeforeShutDown.invoke()
+        await ACCIO.db.execute(
             "insert or replace into services (service,service_on) values (?,?)",
-            (service, False),
+            (self.__class__.__name__, False),
         )
         for bhv in self._behaviors:
             bhv.set_activity(False)
-
-        # TODO: better way to cancel
-        self._l.cancel()
         self._active = False
 
     async def __setup(self):
@@ -130,12 +132,12 @@ class Service:
     @classmethod
     async def create_instance(cls):
         self = cls()
-        # TODO
         if __setup := getattr(self, f"_{self.__class__.__name__}__setup", None):
-            await __setup()  # NOTE: ensure all services were instantiated before setup
+            await __setup()
         self._behaviors = [
             await behavior.create_instance(self) for behavior in cls.behaviors
         ]
+        await self.OnSetupFinished.invoke()
         return self
 
 
@@ -147,7 +149,7 @@ class ServiceBehavior(Generic[_TService]):
         service_t = get_args(cls.__orig_bases__[0])[0]  # type: ignore
         assert not hasattr(service_t, "__args__")  # cann't be union
         assert issubclass(service_t, Service)
-        if not service_t.__dict__.get("behaviors"):
+        if not vars(service_t).get("behaviors"):
             service_t.behaviors = []
         if not cls in service_t.behaviors:
             service_t.behaviors.append(cls)
@@ -201,15 +203,21 @@ class ServiceBehavior(Generic[_TService]):
         ...
 
     async def _handle(self, evt: CQHTTPEvent | _A | _B):
+        if not self._active:
+            return
+        t = None
         if isinstance(evt, CQHTTPEvent):
-            t = [asyncio.create_task(f(evt)) for f in self._cqevt_handlers[evt.__class__]]
+            if fs := self._cqevt_handlers.get(evt.__class__):
+                t = [asyncio.create_task(f(evt)) for f in fs]
         else:
             e, before_post, arg = evt
             if before_post:
-                t = [asyncio.create_task(f(e)) for f in self._act_before_handlers[e.__class__]]
+                if fs := self._act_before_handlers.get(e.__class__):
+                    t = [asyncio.create_task(f(e)) for f in fs]
             else:
                 assert arg
-                t = [asyncio.create_task(f(e, arg)) for f in self._act_after_handlers[e.__class__]]
+                if fs := self._act_after_handlers.get(e.__class__):
+                    t = [asyncio.create_task(f(e, arg)) for f in fs]
         if t:
             await asyncio.wait(t)
 
@@ -219,8 +227,6 @@ class ServiceBehavior(Generic[_TService]):
     @classmethod
     async def create_instance(cls, service: _TService):
         self = cls(service)
-        if isinstance(self, IMessageFilter):
-            self.compile()
         if __setup := getattr(self, f"_{self.__class__.__name__}__setup", None):
             await __setup()
         return self
@@ -336,16 +342,18 @@ class IMessageFilter:
     entrys = []
     entry_flags = RegexFlag.NOFLAG
 
-    def compile(self):
+    def filter(self, evt: "Message") -> Match[str] | None:
         cls = self.__class__
         cls.entrys = [compile(et, cls.entry_flags) for et in cls.entrys]
 
-    # TODO: optimize
-    def filter(self, evt: "Message") -> Match[str] | None:
-        msg = evt.message
-        for _entry in self.entrys:
-            if match := _entry.match(msg):
-                return match
+        def filter(evt: "Message") -> Match[str] | None:
+            msg = evt.message
+            for _entry in self.entrys:
+                if match := _entry.match(msg):
+                    return match
+
+        self.filter = filter
+        return self.filter(evt)
 
 
 # TODO

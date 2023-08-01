@@ -56,7 +56,7 @@ class YukkuriCore(ServiceBehavior[Yukkuri], IMessageFilter):
         text = quote(text)
         url = f"https://www.yukumo.net/api/v2/aqtk{type}/koe.mp3?type={sub_type}&kanji={text}"
         with open(r".\src\temp\yukkuri_temp.mp3", "wb") as file:
-            for i in await Request.get_iter_content(url):
+            async for i in Request.get_iter_content(url):
                 file.write(i)
             file.close()
 

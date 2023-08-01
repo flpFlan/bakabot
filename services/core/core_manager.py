@@ -3,7 +3,8 @@ import logging
 
 # -- third party --
 # -- own --
-from services.base import ServiceBehavior, Service, IMessageFilter, OnEvent
+from .base import CoreService
+from services.base import ServiceBehavior, IMessageFilter, OnEvent
 from cqhttp.events import CQHTTPEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
@@ -13,7 +14,7 @@ from accio import ACCIO
 log = logging.getLogger("bot.service.coreManager")
 
 
-class CoreManager(Service):
+class CoreManager(CoreService):
     pass
 
 
@@ -30,10 +31,10 @@ class BotControl(ServiceBehavior[CoreManager], IMessageFilter):
         msg = evt.message
         group_id = evt.group_id
         if msg == "/bot on":
-            BlockGroup.instance.delete(group_id)
+            await BlockGroup.instance.delete(group_id)
             await SendGroupMsg(group_id, f"{ACCIO.bot.name} running！").do()
         if msg == "/bot off":
-            BlockGroup.instance.add(group_id)
+            await BlockGroup.instance.add(group_id)
             c = SendGroupMsg(group_id, f"{ACCIO.bot.name} closed")
             await c.do()
 
@@ -102,10 +103,10 @@ class ServiceControl(ServiceBehavior[CoreManager], IMessageFilter):
 
 class BlockGroup(ServiceBehavior[CoreManager]):
     async def __setup(self):
-        ACCIO.db.execute(
+        await ACCIO.db.execute(
             "create table if not exists blockgroups (group_id integer unique)"
         )
-        self.blockgroups = self.get()
+        self.blockgroups = await self.get()
         BlockGroup.instance = self
 
     @OnEvent[CQHTTPEvent].add_listener
@@ -114,24 +115,23 @@ class BlockGroup(ServiceBehavior[CoreManager]):
             if group_id in self.blockgroups:
                 evt.cancel()
 
-    def get(self) -> set[int]:
-        db = ACCIO.db
-        db.execute("select group_id from blockgroups")
-        result = db.fatchall()
+    async def get(self) -> set[int]:
+        await ACCIO.db.execute("select group_id from blockgroups")
+        result = await ACCIO.db.fatchall()
         return set(group[0] for group in result)
 
-    def add(self, group_id: int):
+    async def add(self, group_id: int):
         blockgroups = self.blockgroups
         if group_id in blockgroups:
             log.warning("try to add group_id already exist")
             return
-        ACCIO.db.execute("insert into blockgroups (group_id) values (?)", (group_id,))
+        await ACCIO.db.execute("insert into blockgroups (group_id) values (?)", (group_id,))
         blockgroups.add(group_id)
 
-    def delete(self, group_id: int):
+    async def delete(self, group_id: int):
         blockgroups = self.blockgroups
         if group_id not in blockgroups:
             log.warning("try to delete group_id not exist")
             return
-        ACCIO.db.execute("delete from blockgroups where group_id = ?", (group_id,))
+        await ACCIO.db.execute("delete from blockgroups where group_id = ?", (group_id,))
         blockgroups.remove(group_id)

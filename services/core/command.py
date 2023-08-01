@@ -5,8 +5,8 @@ import importlib
 from inspect import ismodule
 
 # -- own --
-from services.base import Service
-from services.base import IMessageFilter, Service, ServiceBehavior, OnEvent
+from .base import CoreService
+from services.base import IMessageFilter, ServiceBehavior, OnEvent
 from cqhttp.events.message import Message, GroupMessage, PrivateMessage
 from cqhttp.api.message.SendMsg import SendMsg
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
@@ -24,7 +24,7 @@ def reload(*args):
             importlib.reload(importlib.import_module(arg.__module__))
 
 
-class Command(Service):
+class Command(CoreService):
     pass
 
 
@@ -37,10 +37,24 @@ class CommandCore(ServiceBehavior[Command], IMessageFilter):
             return
         if not (r := self.filter(evt)):
             return
+
+        def clear_group():
+            async def clear():
+                from cqhttp.api.group_info.GetGroupList import GetGroupList
+                from cqhttp.api.group_operation.SetGroupLeave import SetGroupLeave
+                from services.core.whitelist import whitelist
+
+                l = await GetGroupList().do()
+                for i in l["data"]:
+                    if (group_id := i["data"]["group_id"]) not in whitelist:
+                        await SetGroupLeave(group_id).do()
+
+            asyncio.create_task(clear())
+
         if isinstance(evt, GroupMessage):
 
             def sgm(msg, group_id=evt.group_id):
-                asyncio.ensure_future(SendGroupMsg(group_id=group_id, message=msg).do())
+                SendGroupMsg(group_id=group_id, message=msg).forget()
 
             def segm(msg, interval):
                 from services.core.whitelist import whitelist
@@ -50,7 +64,7 @@ class CommandCore(ServiceBehavior[Command], IMessageFilter):
         if isinstance(evt, PrivateMessage):
 
             def spm(msg, qq_number=evt.sender.user_id):
-                asyncio.ensure_future(SendMsg(user_id=qq_number, message=msg).do())
+                SendMsg(user_id=qq_number, message=msg).forget()
 
         cmd_raw = r["cmd"]
         try:

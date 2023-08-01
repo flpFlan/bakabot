@@ -1,17 +1,15 @@
 # -- stdlib --
-from datetime import datetime, tzinfo
 import time, inspect
 from collections import defaultdict
-from typing import Any, Callable, ClassVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Optional, overload
 
 # -- third party --
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.job import Job
-
-# -- own --
-from utils.core_event import CoreEvent
 
 # -- code --
+if TYPE_CHECKING:
+    from datetime import datetime, tzinfo
+    from services.base import Service
 
 time_graph = defaultdict(lambda: 0.0)
 
@@ -42,26 +40,47 @@ def cool_down_for(seconds: float):
 
 class Scheduled:
     _scheduler: ClassVar[AsyncIOScheduler] = AsyncIOScheduler()
-    _jobs: ClassVar[dict[str, Job]] = {}
-
-    @classmethod
-    # TODO
-    def cancel(cls, name: str):
-        if name in cls._jobs:
-            cls._jobs[name].remove()
-            cls._jobs.pop(name)
+    _scheduler.start()
 
     class _Trigger:
         trigger: ClassVar[str]
 
-        def __init__(self, **kwargs):
+        @overload
+        def __init__(self, refer: "Service", **kwargs):
+            ...
+
+        @overload
+        def __init__(self, refer: None = None, *, forget: Literal[True], **kwargs):
+            ...
+
+        def __init__(self, refer: Optional["Service"] = None, *, forget=False, **kwargs):
+            if not forget:
+                assert refer is not None
+                self.refer = refer
+            self.forget = forget
             self._args = {} | kwargs
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            ...
 
         def add(self, f: Callable):
             job = Scheduled._scheduler.add_job(f, self.__class__.trigger, **self._args)
-            Scheduled._jobs[f.__name__] = job
+            if not self.forget:
 
-        def timezone(self, t: tzinfo | str):
+                async def pause():
+                    job.pause()
+
+                async def resume():
+                    job.resume()
+
+                self.refer.OnBeforeShutDown += pause
+                self.refer.OnAfterStart += resume
+            return job
+
+        def timezone(self, t: "tzinfo | str"):
             self._args["timezone"] = t
             return self
 
@@ -94,11 +113,11 @@ class Scheduled:
             self._args["seconds"] = t
             return self
 
-        def start_date(self, t: datetime | str):
+        def start_date(self, t: "datetime | str"):
             self._args["start_date"] = t
             return self
 
-        def end_date(self, t: datetime | str):
+        def end_date(self, t: "datetime | str"):
             self._args["end_date"] = t
             return self
 
@@ -139,11 +158,11 @@ class Scheduled:
             self._args["second"] = t
             return self
 
-        def start_date(self, t: datetime | str):
+        def start_date(self, t: "datetime | str"):
             self._args["start_date"] = t
             return self
 
-        def end_date(self, t: datetime | str):
+        def end_date(self, t: "datetime | str"):
             self._args["end_date"] = t
             return self
 
@@ -152,6 +171,6 @@ class Scheduled:
 
         trigger = "date"
 
-        def run_date(self, t: datetime | str):
+        def run_date(self, t: "datetime | str"):
             self._args["run_date"] = t
             return self

@@ -2,21 +2,21 @@
 
 # -- third party --
 # -- own --
-from services.base import ServiceBehavior, Service, OnEvent
+from .base import CoreService
+from services.base import ServiceBehavior, OnEvent
 from cqhttp.events.message import Message
 
 
 # -- code --
 
 
-class MessagePreProcess(Service):
+class MessagePreProcess(CoreService):
     pass
 
 
 class Process(ServiceBehavior[MessagePreProcess]):
     @OnEvent[Message].add_listener
     async def handle(self, evt: Message):
-        # TODO: use subscript
         evt.message = (
             evt.message.replace("&amp;", "&")
             .replace("&#91;", "[")

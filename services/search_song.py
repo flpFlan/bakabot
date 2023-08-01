@@ -70,12 +70,11 @@ class SearchSongCore(ServiceBehavior[SearchSong], IMessageFilter):
     entrys = [r"^点歌(?P<song>.+)$"]
 
     async def __setup(self):
-        headers = {
+        self.headers = {
             "User-Agent": fake_useragent.UserAgent().random,
             "Host": "music.163.com",
             "Referer": "http://music.163.com/search/",
         }
-        self.main_url = "http://music.163.com/"
         self.ep = Encrypyed()
 
     @OnEvent[GroupMessage].add_listener
@@ -107,7 +106,7 @@ class SearchSongCore(ServiceBehavior[SearchSong], IMessageFilter):
             "limit": limit,
         }
         data = self.ep.search(text)
-        result = await Request.post_json(url, data=data)
+        result = await Request.post_json(url, data=data,headers=self.headers)
         if "result" not in result:
             return "error"
         elif "songCount" not in result["result"]:
