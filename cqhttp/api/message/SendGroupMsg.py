@@ -1,44 +1,38 @@
 """发送群聊消息"""
 import asyncio
-import threading
-import time
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+import inspect
+from typing import Callable, Optional, TypedDict
+from cqhttp.api.base import ApiAction, ResponseBase
+from cqhttp.cqcode.base import CQCode
+from cqhttp.api.group_info.GetGroupInfo import (
+    GetGroupInfo,
+    Response as GroupInfoResponse,
+)
+
+
+class Data(TypedDict):
+    message_id: int
 
 
 class Response(ResponseBase):
-    class Data:
-        message_id: int
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class SendGroupMsg(ApiAction[Response]):
     """发送群聊消息"""
 
-    action = "send_group_msg"
-    response: Response
-
-    def __init__(
-        self,
-        group_id: int,
-        message: str,
-        auto_escape: bool = False,
-        *,
-        echo: Optional[str] = None
-    ):
-        super().__init__()
-        self.response = Response()
-        self.group_id = group_id
-        self.message = message
-        self.auto_escape = auto_escape
-        self.echo = echo
+    action: str = field(init=False, default="send_group_msg")
+    group_id: int
+    message: str | bool | CQCode
+    auto_escape: bool = False
 
     @staticmethod
     def many(
         group_list: list[int] | set[int],
-        message: str,
+        message: str | CQCode | Callable[[GroupInfoResponse], str],
         auto_escape: bool = False,
         *,
         echo: Optional[str] = None
@@ -50,7 +44,7 @@ class SendManyGroupMsg:
     def __init__(
         self,
         group_list: list[int] | set[int],
-        message: str,
+        message: str | CQCode | Callable[[GroupInfoResponse], str],
         auto_escape: bool = False,
         *,
         echo: Optional[str] = None
@@ -59,21 +53,30 @@ class SendManyGroupMsg:
         self.message = message
         self.auto_escape = auto_escape
         self.echo = echo
+        self._interval = 3
 
-    def do(self, bot, interval=3):
-        def target():
+    def interval(self, interval: float):
+        self._interval = interval
+        return self
+
+    def forget(self):
+        async def target():
             group_list = self.group_list
             message = self.message
             auto_escape = self.auto_escape
             echo = self.echo
+            interval = self._interval
             for group_id in group_list:
-                task = SendGroupMsg(
+                if inspect.isfunction(message):
+                    r = await GetGroupInfo(group_id=group_id).do()
+                    message = message(r)
+                message = str(message)
+                await SendGroupMsg(
                     group_id=group_id,
                     message=message,
                     auto_escape=auto_escape,
                     echo=echo,
-                ).do(bot)
-                asyncio.run(task)
-                time.sleep(interval)
+                ).do()
+                await asyncio.sleep(interval)
 
-        threading.Thread(name="send_groups_msg", target=target).start()
+        _t = asyncio.create_task(target())

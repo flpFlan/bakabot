@@ -1,30 +1,36 @@
 # -- stdlib --
 import asyncio, logging
+import sys
 
-# -- third party --
 # -- own --
-from config import Bots, Endpoints
+from accio import ACCIO
 
 # -- code --
 logging.basicConfig(
-    filename="log.txt",
-    format="%(asctime)s - %(name)s - %(levelname)s"
-    + "\n==============================================\n"
-    + "%(message)s",
-    level=logging.DEBUG,
+    format="""
+    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    %(asctime)s - %(name)s - %(levelname)s
+    %(message)s
+    <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    """,
+    level=logging.INFO,
+    handlers=[logging.StreamHandler(), logging.FileHandler("log.txt")],
 )
 
 
 async def start_bot():
-    loop = asyncio.get_event_loop()
-    default = "localhost:2333"
-    for bot in Bots:
-        addr = Endpoints.get(bot.name, default)
-        await bot.start_up(addr)
-        loop.create_task(bot.behavior.loop(loop))
+    bot = ACCIO.bot
+    await bot.setup()
+    # import argparse
+
+    # parser = argparse.ArgumentParser(prog=sys.argv[0])
+    # parser.add_argument("--host", default="localhost", type=str)
+    # parser.add_argument("--port", default="2333", type=int)
+    # options = parser.parse_args()
+
+    await bot.run_forever()
 
 
 if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(start_bot())
-    loop.run_forever()
+    with asyncio.Runner() as runner:
+        runner.run(start_bot())

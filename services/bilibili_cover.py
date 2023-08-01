@@ -1,13 +1,13 @@
 # -- stdlib --
 import re
-import requests
 
 # -- third party --
 # -- own --
-from services.base import register_to, Service, IMessageFilter, EventHandler
+from services.base import Service, ServiceBehavior, IMessageFilter, OnEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
+from cqhttp.cqcode import Image
 
 # -- code --
 
@@ -35,34 +35,30 @@ def av_to_bv(x: int) -> str:
     return "".join(r)
 
 
-class BilibiliCoverCore(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
+class BilibiliCover(Service):
+    pass
+
+
+class BilibiliCoverCore(ServiceBehavior[BilibiliCover], IMessageFilter):
     entrys = [r"^b站封面获取(?P<type>live|cv|av|bv)?(?P<arg>\w+)"]
     entry_flags = re.I
 
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
-        bot = self.bot
         group_id = evt.group_id
-        type = (r.get("type", "") or "live").lower()
-        arg = r.get("arg", "")
+        type, arg = (r["type"] or "live").lower(), r["arg"]
         if type == "bv":
             arg = bv_to_av("BV" + arg)
             type = "av"
         if url := await self.get_b_cover(arg, type):
-            await SendGroupMsg(group_id, f"[CQ:image,file={url}]").do(bot)
+            await SendGroupMsg(group_id, Image(url)).do()
             return
         m = "呜，房间为空" if type == "live" else "呜，稿件为空"
-        await SendGroupMsg(group_id, m).do(bot)
+        await SendGroupMsg(group_id, m).do()
 
     async def get_b_cover(self, id, type="av"):
-        url = f"https://apiv2.magecorn.com/bilicover/get?"
-        "type={type}&id={id}&client=2.5.2"
-        r = Request.Sync.get_json(url)
+        url = f"https://apiv2.magecorn.com/bilicover/get?type={type}&id={id}&client=2.5.2"
+        r = await Request.get_json(url)
         return r.get("url", None)
-
-
-@register_to("ALL")
-class BilibiliCover(Service):
-    cores = [BilibiliCoverCore]

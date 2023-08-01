@@ -1,30 +1,25 @@
 """获取群公告"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from typing import TypedDict
+from cqhttp.api.base import ApiAction, ResponseBase
 
+class Message(TypedDict):
+    text: str
+    images: list[str]
+    
+class NoticeInfo(TypedDict):
+    sender_id: int
+    publish_time: int
+    message: Message
 
 class Response(ResponseBase):
-    class NoticeInfo:
-        class Message:
-            text: str
-            images: list[str]
-
-        sender_id: int
-        publish_time: int
-        message: Message
-
     data: list[NoticeInfo]
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class GetGroupNotice(ApiAction[Response]):
     """获取群公告"""
 
-    action = "_get_group_notice"
-    response: Response
-
-    def __init__(self, group_id: int, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = Response()
-        self.group_id = group_id
-        self.echo = echo
+    action:str = field(init=False,default="_get_group_notice")
+    group_id: int

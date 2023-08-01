@@ -1,10 +1,10 @@
-class EventArgs:
-    canceled: bool = False
+from typing import ClassVar, Type
 
 
 class Event:
-    def __init__(self):
-        self._ = EventArgs()
+    classes:ClassVar[set[Type["Event"]]]=set() # events that can be actually instantiated
 
-    def cancel(self):
-        self._.canceled = True
+    @classmethod
+    def get_real_types(cls)->list[Type["Event"]]:
+        """get sub_events that can be actually delivered by go-cqhttp"""
+        return [c for c in Event.classes if issubclass(c,cls) or c is cls]

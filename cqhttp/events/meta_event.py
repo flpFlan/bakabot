@@ -1,27 +1,24 @@
 from cqhttp.events.base import CQHTTPEvent
-from cqhttp.events.base import register_to_events
 
 
 class MetaEvent(CQHTTPEvent):
-    post_type = "meta_event"
+    post_type: str = "meta_event"
+
     meta_event_type: str
 
-    def __init__(self):
-        super().__init__()
 
-
-@register_to_events
+@CQHTTPEvent.register
 class HeartBeatBag(MetaEvent):
     class Status:
         class StatusStatistics:
-            PacketReceived: int
-            PacketSent: int
-            PacketLost: int
-            MessageReceived: int
-            MessageSent: int
-            DisconnectTimes: int
-            LostTimes: int
-            LastMessageTime: int
+            packet_received: int
+            packet_sent: int
+            packet_lost: int
+            message_received: int
+            message_sent: int
+            disconnect_times: int
+            lost_times: int
+            last_message_time: int
 
         app_initialized: bool
         app_enabled: bool
@@ -35,38 +32,23 @@ class HeartBeatBag(MetaEvent):
     status: Status
     interval: int
 
-    def __init__(self):
-        super().__init__()
-
 
 class LifeCycle(MetaEvent):
-    meta_event_type = "lifecycle"
+    meta_event_type: str = "lifecycle"
 
     sub_type: str
 
-    def __init__(self):
-        super().__init__()
 
-
-@register_to_events
+@CQHTTPEvent.register
 class LifeCycleEnabled(LifeCycle):
-    sub_type = "enable"
-
-    def __init__(self):
-        super().__init__()
+    sub_type: str = "enable"
 
 
-@register_to_events
+@CQHTTPEvent.register
 class LifeCycleDisabled(LifeCycle):
-    sub_type = "disable"
-
-    def __init__(self):
-        super().__init__()
+    sub_type: str = "disable"
 
 
-@register_to_events
+@CQHTTPEvent.register
 class LifeCycleConnected(LifeCycle):
-    sub_type = "connect"
-
-    def __init__(self):
-        super().__init__()
+    sub_type: str = "connect"

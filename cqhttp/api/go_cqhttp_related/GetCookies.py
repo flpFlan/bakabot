@@ -1,24 +1,19 @@
 """获取 Cookies"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from typing import Optional, TypedDict
+from cqhttp.api.base import ApiAction,  ResponseBase
 
+class Data(TypedDict):
+    cookies: str
 
 class Response(ResponseBase):
-    class Data:
-        cookies: str
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class GetCookies(ApiAction[Response]):
     """获取 Cookies"""
 
-    action = "get_cookies"
-    response: Response
-
-    def __init__(self, domain: Optional[str] = None, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = Response()
-        self.domain = domain
-        self.echo = echo
+    action:str = field(init=False,default="get_cookies")
+    domain: Optional[str] = None

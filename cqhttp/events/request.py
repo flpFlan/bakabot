@@ -1,33 +1,27 @@
 from cqhttp.events.base import CQHTTPEvent
-from cqhttp.events.base import register_to_events
 
 
 class Request(CQHTTPEvent):
-    post_type = "request"
+    post_type: str = "request"
+
     request_type: str
 
-    def __init__(self):
-        super().__init__()
 
-
-@register_to_events
+@CQHTTPEvent.register
 class FriendRequest(Request):
     """加好友请求"""
 
-    request_type = "friend"
+    request_type: str = "friend"
 
     user_id: int
     comment: str
     flag: str
 
-    def __init__(self):
-        super().__init__()
-
 
 class GroupRequest(Request):
     """加群请求／邀请"""
 
-    request_type = "group"
+    request_type: str = "group"
 
     sub_type: str
     group_id: int
@@ -35,25 +29,16 @@ class GroupRequest(Request):
     comment: str
     flag: str
 
-    def __init__(self):
-        super().__init__()
 
-
-@register_to_events
+@CQHTTPEvent.register
 class GroupAddRequest(GroupRequest):
     """加群请求"""
 
-    sub_type = "add"
-
-    def __init__(self):
-        super().__init__()
+    sub_type: str = "add"
 
 
-@register_to_events
+@CQHTTPEvent.register
 class GroupInviteRequest(GroupRequest):
     """邀请登录号入群"""
 
-    sub_type = "invite"
-
-    def __init__(self):
-        super().__init__()
+    sub_type: str = "invite"

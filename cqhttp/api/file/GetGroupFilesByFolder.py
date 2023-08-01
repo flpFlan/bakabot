@@ -1,27 +1,22 @@
 """获取群子目录文件列表"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from typing import Optional, TypedDict
+from cqhttp.api.base import ApiAction, ResponseBase
 from cqhttp.api.file.GetGroupRootFiles import File, Folder
 
+class Data(TypedDict):
+    files: list[File]
+    folders: list[Folder]
 
 class Response(ResponseBase):
-    class Data:
-        files: list[File]
-        folders: list[Folder]
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class GetGroupFilesByFolder(ApiAction[Response]):
     """获取群子目录文件列表"""
 
-    action = "get_group_files_by_folder"
-    response: Response
-
-    def __init__(self, group_id: int, folder_id: str, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = Response()
-        self.group_id = group_id
-        self.folder_id = folder_id
-        self.echo = echo
+    action:str = field(init=False,default="get_group_files_by_folder")
+    group_id: int
+    folder_id: str

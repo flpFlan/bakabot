@@ -1,4 +1,5 @@
 # -- stdlib --
+from ast import Pass
 import json
 import random
 import requests
@@ -7,10 +8,11 @@ from urllib.request import urlopen
 # -- third party --
 
 # -- own --
-from services.base import register_to, Service, IMessageFilter, EventHandler
+from services.base import OnEvent, Service, ServiceBehavior, IMessageFilter
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
+from cqhttp.cqcode import Image
 
 # -- code --
 urllist_0 = [
@@ -25,36 +27,41 @@ urllist_1 = [
 ]
 
 
-class RandomArtCore(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
+class RandomArt(Service):
+    pass
+
+
+class RandomArtCore(ServiceBehavior[RandomArt], IMessageFilter):
     entrys = [r"^随机图片\s*(?P<tag>.+)?"]
 
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if r := self.filter(evt):
             try:
-                if tag := r.get("tag", ""):
+                if tag := r["tag"]:
                     if url := await self.search_random(tag):
-                        m = f"[CQ:image,file={url}]"
+                        m = f"{Image(url)}"
                     else:
                         m = "没有找到相关图片Σ( ° △ °|||)"
                 else:
                     url = await self.get_random()
-                    m = f"[CQ:image,file={url}]"
+                    m = f"{Image(url)}"
             except requests.ConnectTimeout:
                 m = "请求超时(Ｔ▽Ｔ)"
-            await SendGroupMsg(evt.group_id, m).do(self.bot)
+            await SendGroupMsg(evt.group_id, m).do()
 
-    async def get_random(self):
+    async def get_random(self) -> str:
         type = random.getrandbits(1)
         if type == 0:
             key = ["img", "imgurl"]
             url = random.choice(urllist_0)
-            resonse = Request.Sync.get_json(url)
+            resonse = await Request.get_json(url)
             for i in key:
                 if i in resonse:
                     if resonse[i].startswith("//"):
                         resonse[i] = "http:" + resonse[i]
                     return resonse[i]
+            return ""  # for type check
         else:
             url = random.choice(urllist_1)
             return urlopen(url, timeout=5).geturl()
@@ -63,7 +70,7 @@ class RandomArtCore(EventHandler, IMessageFilter):
         for c in reversed(range(6)):
             data = {"str": tag, "id": 24 * random.randint(0, c)}
             url = f'https://www.duitang.com/napi/blogv2/list/by_search/?kw={data["str"]}&after_id={data["id"]}'
-            r = Request.Sync.get_text(url, timeout=10)
+            r = await Request.get_text(url, timeout=10)
             if len(r) >= 50:
                 break
         assert r  # type: ignore
@@ -76,8 +83,3 @@ class RandomArtCore(EventHandler, IMessageFilter):
                 return i["photo"]["path"].replace(".gif_jpeg", ".gif")
             return None
         return None
-
-
-@register_to("ALL")
-class RandomArt(Service):
-    cores = [RandomArtCore]

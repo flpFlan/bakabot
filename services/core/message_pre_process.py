@@ -2,28 +2,24 @@
 
 # -- third party --
 # -- own --
-from services.core.base import core_service
-from services.base import EventHandler, Service
+from .base import CoreService
+from services.base import ServiceBehavior, OnEvent
 from cqhttp.events.message import Message
 
 
 # -- code --
-class Process(EventHandler):
-    interested = [Message]
 
+
+class MessagePreProcess(CoreService):
+    pass
+
+
+class Process(ServiceBehavior[MessagePreProcess]):
+    @OnEvent[Message].add_listener
     async def handle(self, evt: Message):
-        msg = evt.message
-        msg = msg.replace("&amp;", "&")
-        msg = msg.replace("&#91;", "[")
-        msg = msg.replace("&#93;", "]")
-        msg = msg.replace("&#44;", ",")
-        evt.message = msg
-
-
-@core_service
-class MessagePreProcess(Service):
-    priority = -1
-    cores = [Process]
-
-    async def close(self):
-        pass
+        evt.message = (
+            evt.message.replace("&amp;", "&")
+            .replace("&#91;", "[")
+            .replace("&#93;", "]")
+            .replace("&#44;", ",")
+        )

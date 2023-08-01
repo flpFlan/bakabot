@@ -1,108 +1,88 @@
 # -- stdlib --
 import logging
-from typing import cast
 
-# -- third party --
 # -- own --
-from services.base import EventHandler, IMessageFilter, Service
-from services.core.base import core_service
-from cqhttp.events.notice import GroupPoked
+from .base import CoreService
+from services.base import OnEvent, ServiceBehavior, IMessageFilter
+from cqhttp.events.base import CQHTTPEvent
 from cqhttp.events.message import GroupMessage
+from cqhttp.events.notice import GroupMemberBanned
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.api.group_operation.SetGroupLeave import SetGroupLeave
+from accio import ACCIO
 
 # -- code --
 log = logging.getLogger("bot.service.whitelist")
 whitelist: set[int] = set()
 
 
-class BlockGroup(EventHandler):
-    interested = [GroupMessage, GroupPoked]
-
-    def run(self):
-        super().run()
-        self.service = cast(WhiteList, self.service)
-        service = self.service
-        global whitelist
-        self.whitelist = whitelist = service.get()
-
-    async def handle(self, evt: GroupMessage | GroupPoked):
-        if evt.group_id not in self.whitelist:
-            evt.cancel()
-
-
-class Ping(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
-    entrys = [
-        r"^(?P<ping>/ping)\s+(?P<bot>.+)",
-        r"^(?P<delete>/delete)\s+(?P<bot>.+)",
-        r"^(?P<leave>/leave)$",
-    ]
-
-    async def handle(self, evt: GroupMessage):
-        sender = evt.user_id
-
-        from config import Administrators
-
-        if sender not in Administrators:
-            return
-
-        if (r := self.filter(evt)) is not None:
-            bot = self.bot
-            service = cast(WhiteList, self.service)
-            id = evt.group_id
-            if r.get("ping", None):
-                name = r.get("bot", "")
-                if not name == bot.name:
-                    return
-                service.add(id)
-                await SendGroupMsg(id, "%s已在本群启用！" % bot.name).do(bot)
-            if r.get("delete", None):
-                name = r.get("bot", "")
-                if not name == bot.name:
-                    return
-                service.delete(id)
-            if r.get("leave", None):
-                await SetGroupLeave(evt.group_id).do(bot)
-
-
-@core_service
-class WhiteList(Service):
-    cores = [BlockGroup, Ping]
-
-    def __init__(self, bot):
-        super().__init__(bot)
+class WhiteList(CoreService):
+    async def __setup(self):
         WhiteList.instance = self
-        self.bot.db.execute(
+        await ACCIO.db.execute(
             "create table if not exists whitelist (group_id integer unique)"
         )
 
-    def get(self) -> set[int]:
-        bot = self.bot
-        db = bot.db
-        db.execute("select group_id from whitelist")
-        result = db.fatchall()
-        db.commit()
+    async def get(self) -> set[int]:
+        await ACCIO.db.execute("select group_id from whitelist")
+        result = await ACCIO.db.fatchall()
         return set(group[0] for group in result)
 
-    def add(self, group_id: int):
+    async def add(self, group_id: int):
         if group_id in whitelist:
             log.warning("try to add group_id already exist")
             return
-        bot = self.bot
-        db = bot.db
-
-        db.execute("insert into whitelist (group_id) values (?)", (group_id,))
-        db.commit()
+        await ACCIO.db.execute("insert into whitelist (group_id) values (?)", (group_id,))
         whitelist.add(group_id)
 
-    def delete(self, group_id: int):
+    async def delete(self, group_id: int):
         if group_id not in whitelist:
             log.warning("try to delete group_id not exist")
             return
-        bot = self.bot
-        bot.db.execute("delete from whitelist where group_id = ?", (group_id,))
+        await ACCIO.db.execute("delete from whitelist where group_id = ?", (group_id,))
         whitelist.remove(group_id)
 
-    def close(self):
-        log.warning("core service could not be close")
+
+class Manage(ServiceBehavior[WhiteList], IMessageFilter):
+    entrys = [
+        r"^(?P<action>/ping)\s+(?P<bot>.+)",
+        r"^(?P<action>/delete)\s+(?P<bot>.+)",
+        r"^(?P<action>/leave)$",
+    ]
+
+    @OnEvent[GroupMessage].add_listener
+    async def ping(self, evt: GroupMessage):
+        if evt.user_id not in ACCIO.bot.Administrators:
+            return
+        if not (r := self.filter(evt)):
+            return
+
+        match r["action"]:
+            case "/ping":
+                if not r["bot"] == ACCIO.bot.name:
+                    return
+                await self.service.add(evt.group_id)
+                await SendGroupMsg(evt.group_id, "%s已在本群启用！" % ACCIO.bot.name).do()
+            case "/delete":
+                if not r["bot"] == ACCIO.bot.name:
+                    return
+                await self.service.delete(evt.group_id)
+            case "/leave":
+                await SetGroupLeave(evt.group_id).do()
+
+    @OnEvent[GroupMemberBanned].add_listener
+    async def leave(self, evt: GroupMemberBanned):
+        if evt.user_id == ACCIO.bot.qq_number:
+            await SetGroupLeave(evt.group_id).do()
+
+
+class BlockGroup(ServiceBehavior[WhiteList]):
+    async def __setup(self):
+        global whitelist
+        self.whitelist = whitelist = await self.service.get()
+
+    @OnEvent[CQHTTPEvent].add_listener
+    async def handle(self, evt: CQHTTPEvent):
+        if group_id:=getattr(evt, "group_id", None):
+            if group_id not in self.whitelist:
+                evt.cancel()

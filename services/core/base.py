@@ -1,8 +1,13 @@
-core_services = []
+# -- stdlib --
+import logging
 
+# -- own --
+from services.base import Service
 
-def core_service(cls):
-    core_services.append(cls)
-    if not cls.__dict__.get("priority", None):
-        cls.priority = 0
-    return cls
+# -- code --
+log = logging.getLogger("bot.service.core_service")
+
+#TODO: 此基类会实例化
+class CoreService(Service):
+    async def shutdown(self):
+        log.warning(f"trying to shutdown core service: {self.__class__.__name__}")

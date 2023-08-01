@@ -1,10 +1,16 @@
 from typing import Optional
 from cqhttp.events.base import CQHTTPEvent
-from cqhttp.events.base import register_to_events
 
 
 class Message(CQHTTPEvent):
-    post_type = "message"
+    class Sender:
+        user_id: int
+        nickname: str
+        sex: str
+        age: int
+
+    post_type: str = "message"
+
     message_type: str
     sub_type: str
     message_id: int
@@ -12,74 +18,51 @@ class Message(CQHTTPEvent):
     message: str
     raw_message: str
     font: int
-    sender: object
-    message_sent: bool = False
-
-    def __init__(self):
-        super().__init__()
+    sender: Sender
+#    message_sent:bool = field(default=False,kw_only=True)
 
 
 class PrivateMessage(Message):
     """私聊消息"""
 
-    class Sender:
-        user_id: int
-        nickname: str
-        sex: str
-        age: int
+    message_type: str = "private"
 
-    message_type = "private"
-
-    sender: Sender
+    sender: Message.Sender
     target_id: int
     temp_source: int
 
-    def __init__(self):
-        super().__init__()
 
-
-@register_to_events
+@CQHTTPEvent.register
 class FriendMessage(PrivateMessage):
     """好友消息"""
 
-    sub_type = "friend"
-
-    def __init__(self):
-        super().__init__()
+    sub_type: str = "friend"
 
 
-@register_to_events
+@CQHTTPEvent.register
 class GroupTempMessage(PrivateMessage):
     """群临时会话消息"""
 
-    class Sender(PrivateMessage.Sender):
+    class Sender(Message.Sender):
         group_id: int
 
+    sub_type: str = "group"
+
     sender: Sender
-    sub_type = "group"
-
-    def __init__(self):
-        super().__init__()
 
 
-@register_to_events
+@CQHTTPEvent.register
 class GroupSelfMessage(PrivateMessage):
     """群中自身发送的消息"""
 
-    sub_type = "group_self"
-
-    def __init__(self):
-        super().__init__()
+    sub_type: str = "group_self"
 
 
-@register_to_events
+@CQHTTPEvent.register
 class OtherMessage(PrivateMessage):
     """未分类的私聊消息"""
 
-    sub_type = "other"
-
-    def __init__(self):
-        super().__init__()
+    sub_type: str = "other"
 
 
 class GroupMessage(Message):
@@ -88,54 +71,42 @@ class GroupMessage(Message):
     class Sender:
         user_id: int
         nickname: str
-        sex: Optional[str] = None
-        age: Optional[int] = None
-        card: Optional[str] = None
-        area: Optional[str] = None
-        level: Optional[str] = None
-        role: Optional[str] = None
-        title: Optional[str] = None
+        sex: Optional[str]
+        age: Optional[int]
+        card: Optional[str]
+        area: Optional[str]
+        level: Optional[str]
+        role: Optional[str]
+        title: Optional[str]
 
     class Anonymous:
         id: int
         name: str
         flag: str
 
-    message_type = "group"
+    message_type: str = "group"
 
     sender: Sender
     group_id: int
     anonymous: Optional[Anonymous]
 
-    def __init__(self):
-        super().__init__()
 
-
-@register_to_events
+@CQHTTPEvent.register
 class NormalMessage(GroupMessage):
     """正常消息"""
 
-    sub_type = "normal"
-
-    def __init__(self):
-        super().__init__()
+    sub_type: str = "normal"
 
 
-@register_to_events
+@CQHTTPEvent.register
 class AnonymousMessage(GroupMessage):
     """匿名消息"""
 
-    sub_type = "anonymous"
-
-    def __init__(self):
-        super().__init__()
+    sub_type: str = "anonymous"
 
 
-@register_to_events
+@CQHTTPEvent.register
 class NoticeMessage(GroupMessage):
     """系统提示 ( 如「管理员已禁止群内匿名聊天」 )"""
 
-    sub_type = "notice"
-
-    def __init__(self):
-        super().__init__()
+    sub_type: str = "notice"

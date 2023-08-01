@@ -1,24 +1,19 @@
 """获取中文分词 ( 隐藏 API )"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from typing import TypedDict
+from cqhttp.api.base import ApiAction, ResponseBase
 
+class Data(TypedDict):
+    slices: list[str]
 
 class Response(ResponseBase):
-    class Data:
-        slices: list[str]
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class GetWordSlices(ApiAction[Response]):
     """获取中文分词 ( 隐藏 API )"""
 
-    action = ".get_word_slices"
-    response: Response
-
-    def __init__(self, content: str, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = Response()
-        self.content = content
-        self.echo = echo
+    action:str = field(init=False,default=".get_word_slices")
+    content: str

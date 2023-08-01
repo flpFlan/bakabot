@@ -5,3 +5,5 @@
 /start_bot.bat
 /src
 /log.txt
+/third_party
+__pycache__

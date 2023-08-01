@@ -1,30 +1,25 @@
 """图片 OCR"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from typing import TypedDict
+from cqhttp.api.base import ApiAction,  ResponseBase
 
+class TextDetection(TypedDict):
+    text: str
+    confidence: int
+    coordinates: list[int]
+    
+class Data(TypedDict):
+    texts: list[TextDetection]
+    language: str
 
 class Response(ResponseBase):
-    class Data:
-        class TextDetection:
-            text: str
-            confidence: int
-            coordinates: list[int]
-
-        texts: list[TextDetection]
-        language: str
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class OcrImage(ApiAction[Response]):
     """图片 OCR"""
 
-    action = "ocr_image"
-    response: Response
-
-    def __init__(self, image: str, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = Response()
-        self.image = image
-        self.echo = echo
+    action:str = field(init=False,default="ocr_image")
+    image: str

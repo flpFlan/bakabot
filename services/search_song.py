@@ -1,5 +1,5 @@
 # -- stdlib --
-import os, base64, json, requests
+import os, base64, json
 from binascii import hexlify
 from Crypto.Cipher import AES
 
@@ -7,9 +7,11 @@ from Crypto.Cipher import AES
 import fake_useragent
 
 # -- own --
-from services.base import register_to, Service, IMessageFilter, EventHandler
+from services.base import OnEvent, Service, ServiceBehavior, IMessageFilter
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+from cqhttp.cqcode import Music
+from utils.request import Request
 
 
 # -- code --
@@ -60,34 +62,32 @@ class Encrypyed:
         return data
 
 
-class SearchSongCore(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
+class SearchSong(Service):
+    name = "点歌"
+
+
+class SearchSongCore(ServiceBehavior[SearchSong], IMessageFilter):
     entrys = [r"^点歌(?P<song>.+)$"]
 
-    def __init__(self, service):
-        super().__init__(service)
-        headers = {
+    async def __setup(self):
+        self.headers = {
             "User-Agent": fake_useragent.UserAgent().random,
             "Host": "music.163.com",
             "Referer": "http://music.163.com/search/",
         }
-        self.main_url = "http://music.163.com/"
-        self.session = requests.Session()
-        self.session.headers = headers
         self.ep = Encrypyed()
 
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if r := self.filter(evt):
-            bot = self.bot
-            song = r["song"]
-            id = await self.search_song(song)
+            id = await self.search_song(r["song"])
             if id is None:
-                await SendGroupMsg(evt.group_id, "啊哦Σ(⊙▽⊙，没有找到相关歌曲").do(bot)
+                await SendGroupMsg(evt.group_id, "啊哦Σ(⊙▽⊙，没有找到相关歌曲").do()
                 return
             if id == "error":
-                await SendGroupMsg(evt.group_id, "牙白，发生了不知名的错误！").do(bot)
+                await SendGroupMsg(evt.group_id, "牙白，发生了不知名的错误！").do()
                 return
-            await SendGroupMsg(evt.group_id, f"[CQ:music,type=163,id={id}]").do(bot)
+            await SendGroupMsg(evt.group_id, Music("163", id)).do()
 
     async def search_song(self, search_content, search_type=1, limit=1):
         """
@@ -106,7 +106,7 @@ class SearchSongCore(EventHandler, IMessageFilter):
             "limit": limit,
         }
         data = self.ep.search(text)
-        result = self.session.post(url, data=data).json()
+        result = await Request.post_json(url, data=data,headers=self.headers)
         if "result" not in result:
             return "error"
         elif "songCount" not in result["result"]:
@@ -118,8 +118,3 @@ class SearchSongCore(EventHandler, IMessageFilter):
             for song in songs:
                 song_id = song["id"]
                 return song_id
-
-
-@register_to("ALL")
-class SearchSong(Service):
-    cores = [SearchSongCore]

@@ -1,8 +1,9 @@
 """发送合并转发 ( 群聊 )"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, register_to_api, ResponseBase
+from dataclasses import dataclass, field
+from typing import TypedDict
+from cqhttp.api.base import ApiAction,  ResponseBase
 
-
+@dataclass
 class ForwardNode:
     id: int
     name: str
@@ -10,27 +11,19 @@ class ForwardNode:
     content: str
     seq: str
 
+class Data(TypedDict):
+    message_id: int
+    forward_id: str
 
 class Response(ResponseBase):
-    class Data:
-        message_id: int
-        forward_id: str
-
     data: Data
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class SendGroupForwardMsg(ApiAction[Response]):
     """发送合并转发 ( 群聊 )"""
 
-    action = "send_group_forward_msg"
-    response: Response
-
-    def __init__(
-        self, group_id: int, messages: list[ForwardNode], *, echo: Optional[str] = None
-    ):
-        super().__init__()
-        self.response = Response()
-        self.group_id = group_id
-        self.messages = messages
-        self.echo = echo
+    action:str = field(init=False,default="send_group_forward_msg")
+    group_id: int
+    messages: list[ForwardNode]

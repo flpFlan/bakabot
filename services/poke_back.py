@@ -1,29 +1,29 @@
 # -- stdlib --
 # -- third party --
 # -- own --
-from services.base import register_to, Service, EventHandler
+from services.base import Service, ServiceBehavior, OnEvent
 from cqhttp.events.notice import GroupPoked
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
-from utils.wrapper import timecooling
+from utils.wrapper import cool_down_for
+from cqhttp.cqcode import Poke
+from accio import ACCIO
 
 # -- code --
 
 
-class PokeBackCore(EventHandler):
-    interested = [GroupPoked]
+class PokeBack(Service):
+    pass
 
+
+class PokeBackCore(ServiceBehavior[PokeBack]):
+    @OnEvent[GroupPoked].add_listener
     async def handle(self, evt: GroupPoked):
-        if not evt.target_id == self.bot.qq_number:
+        if not evt.target_id == ACCIO.bot.qq_number:
             return
         await self.pokeback(evt)
 
-    @timecooling(2)
+    @cool_down_for(2)
     async def pokeback(self, evt: GroupPoked):
-        m = f"[CQ:poke,qq={evt.user_id}]"
+        m = f"{Poke(evt.user_id)}"
 
-        await SendGroupMsg(evt.group_id, m).do(self.bot)
-
-
-@register_to("ALL")
-class PokeBack(Service):
-    cores = [PokeBackCore]
+        await SendGroupMsg(evt.group_id, m).do()

@@ -1,29 +1,19 @@
 # -- stdlib --
-import asyncio
 import json
 import logging
-from threading import Thread
-import time
+import asyncio
 from typing import cast
 
 # -- third party --
-import redis
+import redis.asyncio as redis
 
 # -- own --
-from services.base import (
-    register_to,
-    Service,
-    ServiceCore,
-    EventHandler,
-    IMessageFilter,
-)
+from services.base import Service, ServiceBehavior
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
-from cqhttp.events.message import GroupMessage
+from accio import ACCIO
 
 
 # -- code --
-URL = "redis://localhost:6379"
-
 log = logging.getLogger("bot.service.thbMessage")
 thb_notify_groups = set()
 
@@ -38,42 +28,65 @@ ServerNames = {
 }
 
 
-class THBMessageNotifyCore(ServiceCore):
-    shedule_trigger = "interval"
-    args = {"seconds": 1}
+class THBMessageNotify(Service):
+    async def __setup(self):
+        await ACCIO.db.execute(
+            "create table if not exists thb_notify_groups (group_id integer unique)"
+        )
+        global thb_notify_groups
+        self.thb_notify_groups = thb_notify_groups = await self.get_notify_group()
 
-    def run(self):
-        super().run()
+    async def get_notify_group(self) -> set[int]:
+        await ACCIO.db.execute("select group_id from thb_notify_groups")
+        result = await ACCIO.db.fatchall()
+        return set(group[0] for group in result)
 
-        self.sub = sub = redis.from_url(URL).pubsub()
-        sub.psubscribe("thb.*")
+    async def add_notify_group(self, group_id: int):
+        if group_id in self.thb_notify_groups:
+            return
 
-        self.flag = False
-        from threading import Thread
+        await ACCIO.db.execute(
+            f"insert into thb_notify_groups (group_id) values (?)",
+            (group_id,),
+        )
+        self.thb_notify_groups.add(group_id)
 
-        self.thread = thread = Thread(target=self.loop, name="thb_message_notify")
-        thread.start()
+    async def del_notify_group(self, group_id: int):
+        if group_id not in self.thb_notify_groups:
+            return
+        await ACCIO.db.execute(
+            "delete from thb_notify_groups where group_id = ?", (group_id,)
+        )
+        self.thb_notify_groups.remove(group_id)
 
-    def loop(self):
-        while not self.flag:
-            try:
-                for msg in self.sub.listen():
-                    if self.flag:
-                        return
-                    if msg["type"] not in ("message", "pmessage"):
-                        continue
 
-                    _, node, topic = msg["channel"].split(b".")[:3]
-                    if not topic == b"speaker":
-                        continue
-                    message = json.loads(msg["data"])
+class THBMessageNotifyCore(ServiceBehavior[THBMessageNotify]):
+    async def __setup(self):
+        url = ACCIO.conf.get("Service.THBMessageNotify", "url")
+        self.sub = sub = redis.from_url(url).pubsub()
+        await sub.psubscribe("thb.*")
+        self.l = asyncio.create_task(self.loop())
+        self.service.OnBeforeShutDown += self.on_shutdown
 
-                    self.on_message(node, message)
-            except Exception as e:
-                log.error(e)
+    async def on_shutdown(self):
+        self.l.cancel()
 
-            finally:
-                time.sleep(1)
+    async def loop(self):
+        try:
+            async for msg in self.sub.listen():
+                if msg["type"] not in ("message", "pmessage"):
+                    continue
+
+                _, node, topic = msg["channel"].split(b".")[:3]
+                if not topic == b"speaker":
+                    continue
+                message = json.loads(msg["data"])
+
+                self.on_message(node, message)
+        except Exception as e:
+            log.error(e)
+        finally:
+            await asyncio.sleep(1)
 
     def on_message(self, node, message):
         username, content = message
@@ -95,73 +108,4 @@ class THBMessageNotifyCore(ServiceCore):
             content,
         )
         service = cast(THBMessageNotify, self.service)
-        bot = self.bot
-        SendGroupMsg.many(service.thb_notify_groups, send).do(bot, interval=1)
-
-    def close(self):
-        super().close()
-        self.flag = True
-
-
-class NotifyGroupManager(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
-    entrys = [r"^/thb_message (?P<action>on|off)$"]
-
-    async def handle(self, evt: GroupMessage):
-        from config import Administrators
-
-        if evt.user_id not in Administrators:
-            return
-        if r := self.filter(evt):
-            action = r.get("action", None)
-            bot = self.bot
-            service = cast(THBMessageNotify, self.service)
-            group_id = evt.group_id
-            if action == "on":
-                service.add_notify_group(group_id)
-                await SendGroupMsg(group_id, "THBMessageNotify已启用").do(bot)
-            if action == "off":
-                service.del_notify_group(group_id)
-                await SendGroupMsg(group_id, "THBMessageNotify已关闭").do(bot)
-
-
-@register_to("Aya")
-class THBMessageNotify(Service):
-    cores = [NotifyGroupManager, THBMessageNotifyCore]
-
-    async def start(self):
-        await super().start()
-        from bot import Bot
-
-        bot = cast(Bot, self.bot)
-        bot.db.execute(
-            "create table if not exists thb_notify_groups (group_id integer unique)"
-        )
-        global thb_notify_groups
-        self.thb_notify_groups = thb_notify_groups = self.get_notify_group()
-
-    def get_notify_group(self) -> set[int]:
-        bot = self.bot
-        db = bot.db
-        db.execute("select group_id from thb_notify_groups")
-        result = db.fatchall()
-        return set(group[0] for group in result)
-
-    def add_notify_group(self, group_id: int):
-        if group_id in self.thb_notify_groups:
-            return
-        bot = self.bot
-        db = bot.db
-
-        db.execute(
-            f"insert into thb_notify_groups (group_id) values (?)",
-            (group_id,),
-        )
-        self.thb_notify_groups.add(group_id)
-
-    def del_notify_group(self, group_id: int):
-        if group_id not in self.thb_notify_groups:
-            return
-        bot = self.bot
-        bot.db.execute("delete from thb_notify_groups where group_id = ?", (group_id,))
-        self.thb_notify_groups.remove(group_id)
+        SendGroupMsg.many(service.thb_notify_groups, send).interval(1).forget()

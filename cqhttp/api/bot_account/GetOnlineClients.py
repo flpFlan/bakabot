@@ -1,26 +1,21 @@
 """获取当前账号在线客户端列表"""
-from typing import Optional
-from cqhttp.api.base import ApiAction, ResponseBase, register_to_api
+from dataclasses import dataclass, field
+from typing import Optional, TypedDict
+from cqhttp.api.base import ApiAction, ResponseBase
 
-
+class Device(TypedDict):
+    app_id: int
+    device_name: str
+    device_kind: str
+    
 class Response(ResponseBase):
-    class Device:
-        app_id: int
-        device_name: str
-        device_kind: str
-
     clients: list[Device]
 
 
-@register_to_api
+@ApiAction.register
+@dataclass
 class GetOnlineClients(ApiAction[Response]):
     """获取当前账号在线客户端列表"""
 
-    action = "get_online_clients"
-    response: Response
-
-    def __init__(self, no_cache: bool, *, echo: Optional[str] = None):
-        super().__init__()
-        self.response = Response()
-        self.no_cache = no_cache
-        self.echo = echo
+    action:str = field(init=False,default="get_online_clients")
+    no_cache: bool

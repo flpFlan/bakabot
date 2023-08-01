@@ -5,13 +5,14 @@ from urllib.parse import quote
 
 # -- third party --
 # -- own --
-from services.base import register_to, Service, IMessageFilter, EventHandler
+from services.base import Service, ServiceBehavior, IMessageFilter, OnEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from utils.request import Request
+from cqhttp.cqcode import Record
 
 # -- code --
-type = {
+TYPE = {
     "1": "f1",
     "2": "f2",
     "3": "m1",
@@ -23,35 +24,39 @@ type = {
 }
 
 
-class YukkuriCore(EventHandler, IMessageFilter):
-    interested = [GroupMessage]
+class Yukkuri(Service):
+    """食用方法：油库里 + 1-8(可选，表示音源种类) + 文本"""
+
+    name = "油库里"
+
+
+class YukkuriCore(ServiceBehavior[Yukkuri], IMessageFilter):
     entrys = [r"^油库里(?P<type>[1-8])?(?P<content>.+)"]
 
+    @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if r := self.filter(evt):
-            bot = self.bot
             group_id = evt.group_id
 
-            type = r.get("type") or "f1"
-            content = r.get("content")
+            type, content = r["type"] or "f1", r["content"]
             try:
                 content = (await self.trans_to_jp(content)).replace(" ", "")
             except requests.ConnectTimeout:
-                await SendGroupMsg(group_id, "反应不能(✘_✘)").do(bot)
+                await SendGroupMsg(group_id, "反应不能(✘_✘)").do()
                 return
 
             if len(content) > 140:
-                await SendGroupMsg(group_id, "超出字数限制").do(bot)
+                await SendGroupMsg(group_id, "超出字数限制").do()
                 return
-            await self.get_yukkuri(content, sub_type=type)
+            await self.get_yukkuri(content, sub_type=TYPE.get(type, "") or type)
             path = os.path.abspath(r"src\temp\yukkuri_temp.mp3")
-            await SendGroupMsg(group_id, f"[CQ:record,file=file:///{path}]").do(bot)
+            await SendGroupMsg(group_id, Record(f"file:///{path}")).do()
 
     async def get_yukkuri(self, text, type=1, sub_type="f1"):
         text = quote(text)
         url = f"https://www.yukumo.net/api/v2/aqtk{type}/koe.mp3?type={sub_type}&kanji={text}"
         with open(r".\src\temp\yukkuri_temp.mp3", "wb") as file:
-            for i in Request.Sync.get_iter_content(url):
+            async for i in Request.get_iter_content(url):
                 file.write(i)
             file.close()
 
@@ -64,7 +69,7 @@ class YukkuriCore(EventHandler, IMessageFilter):
             "optionext": "zenkaku",
         }
         url = "https://www.ltool.net/chinese-simplified-and-traditional-characters-pinyin-to-katakana-converter-in-simplified-chinese.php"
-        r = Request.Sync.get_text(url)
+        r = await Request.post_text(url, data=data)
         return self.filt_html(r)
 
     def filt_html(self, html):
@@ -78,8 +83,3 @@ class YukkuriCore(EventHandler, IMessageFilter):
         for i in result:
             final_result += i
         return final_result
-
-
-@register_to("ALL")
-class Yukkuri(Service):
-    cores = [YukkuriCore]
