@@ -35,7 +35,7 @@ endpoint = localhost:2333
 -----------
 1. 首先运行 [go-cqhttp](https://github.com/Mrs4s/go-cqhttp)
 
-2. 命令行里运行
+2. 在命令行运行
 
 ```shell
 poetry run python ./start_bot.py
@@ -186,7 +186,9 @@ Services
 
 Games
 --------
-用例: /game + 关键词:
+> 用例
+
+/game + 关键词:
 
 ```
 /game Akinator
@@ -199,7 +201,11 @@ Games
 
 扩展
 --------
-用例
+> 用例
+
+1. 在services目录下新建文件`foo.py`
+
+2. 编码
 
 ```python
 from services.base import Service, ServiceBehavior, OnEvent
@@ -217,6 +223,11 @@ class Bar(ServiceBehavior[Foo]):
       await SendGroupMsg(evt.group_id, "World!").do()
       # 可选的非阻塞形式:
       # SendGroupMsg(evt.group_id, "World!").forget()
+```
+3.在[\_\_init\_\_.py](services/__init__.py)中添加引用
+
+```python
+from .foo import Foo
 ```
 
 具体可参考services目录下任一service
