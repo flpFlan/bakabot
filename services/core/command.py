@@ -38,6 +38,8 @@ class CommandCore(ServiceBehavior[Command], IMessageFilter):
         if not (r := self.filter(evt)):
             return
 
+        env = {}
+
         def clear_group():
             async def clear():
                 from cqhttp.api.group_info.GetGroupList import GetGroupList
@@ -51,6 +53,8 @@ class CommandCore(ServiceBehavior[Command], IMessageFilter):
 
             asyncio.create_task(clear())
 
+        env["clear_group"] = clear_group
+
         if isinstance(evt, GroupMessage):
 
             def sgm(msg, group_id=evt.group_id):
@@ -61,14 +65,22 @@ class CommandCore(ServiceBehavior[Command], IMessageFilter):
 
                 SendGroupMsg.many(whitelist, msg).interval(interval).forget()
 
+            env["sgm"] = sgm
+            env["segm"] = segm
+
         if isinstance(evt, PrivateMessage):
 
             def spm(msg, qq_number=evt.sender.user_id):
                 SendMsg(user_id=qq_number, message=msg).forget()
 
+            env["spm"] = spm
+
         cmd_raw = r["cmd"]
         try:
-            exec(cmd_raw)
+            if evt.user_id == ACCIO.bot.SUPERUSER:
+                exec(cmd_raw)
+            else:
+                exec(cmd_raw, env)
         except Exception as e:
             log.error("error while excute command:\n%s", e)
             if isinstance(evt, GroupMessage):
