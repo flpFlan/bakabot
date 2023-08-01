@@ -1,5 +1,5 @@
 # -- stdlib --
-import json, logging
+import json, logging,asyncio
 from dataclasses import fields
 from typing import Optional, TypeVar, TYPE_CHECKING
 
@@ -42,6 +42,7 @@ class CQHTTPAdapter:
             self.api_conn = await connect(
                 f"ws://{self.host}:{self.port}/api", ping_timeout=None
             )
+            self.api_lock=asyncio.Lock()
             self.event_conn = conn
             await ACCIO.bot.behavior.evt_loop()
             await self.api_conn.close()
@@ -68,8 +69,9 @@ class CQHTTPAdapter:
             form["params"] = dict(**params)
         if echo:
             form["echo"] = echo
-        await self.api_conn.send(json.dumps(form, cls=Encoder))
-        result = await self.api_conn.recv()
+        async with self.api_lock:
+            await self.api_conn.send(json.dumps(form, cls=Encoder))
+            result = await self.api_conn.recv()
         return json.loads(result)
 
     @staticmethod

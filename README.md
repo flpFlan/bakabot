@@ -218,13 +218,13 @@ class Foo(Service):
 class Bar(ServiceBehavior[Foo]):
 
   @OnEvent[GroupMessage].add_listener
-  async def bar(evt:GroupMessage):
-    if evt.message == "Hello"
+  async def bar(self, evt: GroupMessage):
+    if evt.message == "Hello":
       await SendGroupMsg(evt.group_id, "World!").do()
       # 可选的非阻塞形式:
       # SendGroupMsg(evt.group_id, "World!").forget()
 ```
-3.在[\_\_init\_\_.py](services/__init__.py)中添加引用
+3. 在[\_\_init\_\_.py](services/__init__.py)中添加引用
 
 ```python
 from .foo import Foo
