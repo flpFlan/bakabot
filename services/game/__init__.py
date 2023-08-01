@@ -1,2 +1,2 @@
 from .roulette import Roulette
-from .akinator import Akinator
+# from .akinator import Akinator
