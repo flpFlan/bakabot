@@ -21,8 +21,9 @@ class Echo(Service):
 class EchoCore(ServiceBehavior[Echo]):
     @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
-        if evt.user_id in ManagerCore.games:
-            return
+        if evt.group_id in ManagerCore.games:
+            if ManagerCore.games[evt.group_id].get(evt.user_id):
+                return
         cache = self.service.msg_graph[evt.group_id]
         m1, m2 = cache
         if m1 == m2 == evt.message:
