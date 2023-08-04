@@ -42,17 +42,25 @@ class Akinator(Game):
 
     async def __setup(self):
         if item := graph.get(self.owner_id):
-            m = f"冷却中({COOL_DOWN_SEC-item.elapsed_time:.0f}s)"
-            self.kill()
-        else:
-            graph[self.owner_id] = ChronosItem(self.owner_id, COOL_DOWN_SEC, lambda: graph.pop(self.owner_id))
-            graph[self.owner_id].value = self.owner_id # for start countdown
-            m = "tips:\n回复请使用(是|否|不知道|或许是|或许不是)\n退回上一问题请使用(/back)\n结束游戏请使用(/end)"
-            await SendGroupMsg(self.group_id, m).do()
-            self.aki = aki = Aki()
-            if not (m := await aki.start_game("cn", child_mode=True,client_session=ClientSession(trust_env=True,connector=CONN))):
-                m = f"啊哦Σ(⊙▽⊙，{ACCIO.bot.name}似乎发生了一些错误，请稍后重试。"
+            remain_time = COOL_DOWN_SEC-item.elapsed_time
+            if remain_time > 0:
+                await SendGroupMsg(self.group_id, f"冷却中({remain_time:.0f}s)").do()
                 self.kill()
+                return
+            else:
+                if _t:=graph[self.owner_id]._t:
+                    _t.cancel()
+                del graph[self.owner_id]
+        graph[self.owner_id] = ChronosItem(self.owner_id, COOL_DOWN_SEC, lambda: graph.pop(self.owner_id))
+        graph[self.owner_id].value = self.owner_id # for start countdown
+
+        m = "tips:\n回复请使用(是|否|不知道|或许是|或许不是)\n退回上一问题请使用(/back)\n结束游戏请使用(/end)"
+        await SendGroupMsg(self.group_id, m).do()
+        self.aki = aki = Aki()
+        if not (m := await aki.start_game("cn", child_mode=True,client_session=ClientSession(trust_env=True,connector=CONN))):
+            m = f"啊哦Σ(⊙▽⊙，{ACCIO.bot.name}似乎发生了一些错误，请稍后重试。"
+            self.kill()
+
         await SendGroupMsg(self.group_id, m).do()
 
 
