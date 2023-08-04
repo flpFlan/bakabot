@@ -1,7 +1,7 @@
 """依赖https://github.com/Infiniticity/akinator.py"""
 
 # -- third party --
-from third_party.akinator import CantGoBackAnyFurther
+from third_party.akinator import CantGoBackAnyFurther, AkiTimedOut
 from third_party.akinator.async_aki import Akinator as Aki
 from aiohttp import ClientSession, TCPConnector
 
@@ -84,6 +84,10 @@ class AkinatorBehavior(GameBehavior[Akinator]):
             else:
                 m = "我猜不出来了，你赢了。"
         else:
-            m = await aki.answer(ans) or "No Answer"
+            try:
+                m = await aki.answer(ans) or "No Answer"
+            except AkiTimedOut:
+                m = f"游戏超时。({self.game.owner_id})"
+                self.game.kill()
 
         await SendGroupMsg(self.game.group_id, m).do()
