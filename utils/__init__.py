@@ -28,15 +28,15 @@ class ChronosItem(Generic[T]):
 
     def set_default(self):
         self._t and self._t.cancel()  # type: ignore
-        super().__setattr__("value", self.__default_value)
+        object.__setattr__(self,"value", self.__default_value)
 
     def __setattr__(self, __name: str, __value: T):
-        super().__setattr__(__name, __value)
+        object.__setattr__(self,__name, __value)
         if __name == "value":
             _ = self._t and self._t.cancel()
 
             def callback_func():
-                super().__setattr__(__name, self.__default_value)
+                object.__setattr__(self,__name, self.__default_value)
                 self._callback and self._callback()  # type: ignore
                 self._t = self._start_time = None
 
