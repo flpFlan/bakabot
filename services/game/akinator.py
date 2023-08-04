@@ -46,6 +46,7 @@ class Akinator(Game):
             self.kill()
         else:
             graph[self.owner_id] = ChronosItem(self.owner_id, COOL_DOWN_SEC, lambda: graph.pop(self.owner_id))
+            graph[self.owner_id].value = self.owner_id # for start countdown
             m = "tips:\n回复请使用(是|否|不知道|或许是|或许不是)\n退回上一问题请使用(/back)\n结束游戏请使用(/end)"
             await SendGroupMsg(self.group_id, m).do()
             self.aki = aki = Aki()

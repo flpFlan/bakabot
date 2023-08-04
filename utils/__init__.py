@@ -11,7 +11,8 @@ class ChronosItem(Generic[T]):
         self.timeout = timeout
         self._callback = callback
         self.__default_value = value
-        self.value = value
+        self.value:T
+        object.__setattr__(self,"value", value)
 
     @property
     def elapsed_time(self):
