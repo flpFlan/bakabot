@@ -90,5 +90,7 @@ class AkinatorBehavior(GameBehavior[Akinator]):
             except AkiTimedOut:
                 m = f"游戏超时。({self.game.owner_id})"
                 self.game.kill()
+            except:
+                m="网络错误."
 
         await SendGroupMsg(self.game.group_id, m).do()

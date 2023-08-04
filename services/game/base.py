@@ -28,7 +28,8 @@ class Game:
         self._behavior = [bhv(self) for bhv in self.__class__.behaviors]
 
         async def t():
-            await SendGroupMsg(self.group_id, f"长时间未操作，游戏结束。({self.owner_id})").do()
+            if not self.game_over:
+                await SendGroupMsg(self.group_id, f"长时间未操作，游戏结束。({self.owner_id})").do()
             self.kill()
 
         with Scheduled.Date(forget=True) as schedule:
