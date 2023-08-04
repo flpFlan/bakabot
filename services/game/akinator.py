@@ -43,6 +43,7 @@ class Akinator(Game):
     async def __setup(self):
         if item := graph.get(self.owner_id):
             m = f"冷却中({COOL_DOWN_SEC-item.elapsed_time:.0f}s)"
+            self.kill()
         else:
             graph[self.owner_id] = ChronosItem(self.owner_id, COOL_DOWN_SEC, lambda: graph.pop(self.owner_id))
             m = "tips:\n回复请使用(是|否|不知道|或许是|或许不是)\n退回上一问题请使用(/back)\n结束游戏请使用(/end)"
