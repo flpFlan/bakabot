@@ -1,6 +1,6 @@
 # -- stdlib --
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 
 # -- own --
 from services.base import Service
@@ -9,10 +9,10 @@ from services.base import Service
 log = logging.getLogger("bot.service.core_service")
 
 class CoreService(Service, ABC):
-    
-    @abstractmethod
-    def _(self):
-        """to make this class abstract, so that it won't be instantiated"""
-
     async def shutdown(self):
         log.warning(f"trying to shutdown core service: {self.__class__.__name__}")
+
+
+# prevent this class from being instantiated
+setattr(CoreService.shutdown, '__isabstractmethod__', True)
+del CoreService.__abstractmethods__
