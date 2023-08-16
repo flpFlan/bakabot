@@ -2,6 +2,7 @@
 import asyncio
 import logging, os
 from typing import TYPE_CHECKING, Literal, Optional, TypeVar, overload
+from inspect import isabstract
 
 # -- own --
 from adapter import CQHTTPAdapter
@@ -94,7 +95,7 @@ class Bot:
         from services.base import Service
 
         # NOTE: don't use asyncio.gather, to delay __setup
-        g = [await s.create_instance() for s in Service.get_classes()]
+        g = [await s.create_instance() for s in Service.get_classes() if not isabstract(s)]
         self.services.extend(g)
 
         for s in self.services:
