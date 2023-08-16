@@ -1,6 +1,7 @@
 # -- stdlib --
 import random
 from collections import defaultdict
+from typing import ClassVar, Self
 
 # -- third party --
 # -- own --
@@ -31,9 +32,11 @@ class NowdayCP(Service):
         self.cp_graph = await self.get()
 
     async def get(self) -> dict[int, dict[int, tuple[int, str]]]:
-        await ACCIO.db.execute("select group_id, qq_number, cp_qq, cp_name from nowday_cp")
+        await ACCIO.db.execute(
+            "select group_id, qq_number, cp_qq, cp_name from nowday_cp"
+        )
         r = await ACCIO.db.fatchall()
-        graph = defaultdict(dict)
+        graph: defaultdict[int, dict] = defaultdict(dict)
         for t in r:
             graph[t[0]][t[1]] = (t[2], t[3])
 
@@ -82,11 +85,10 @@ class NowdayCPCore(ServiceBehavior[NowdayCP]):
             cp_qq = cp[0]
             cp_name = cp[1]
         else:
-            group_members = await GetGroupMemberList(group_id).do()
-            assert group_members
+            resp = await GetGroupMemberList(group_id).do()
             group_members = [
                 (member["user_id"], member["card"] or member["nickname"])
-                for member in group_members["data"]
+                for member in resp["data"]
             ]
             random.shuffle(group_members)
             member_graph = cp_graph[group_id]
@@ -109,6 +111,7 @@ class NowdayCPCore(ServiceBehavior[NowdayCP]):
 
 class CPWord(ServiceBehavior[NowdayCP], IMessageFilter):
     entrys = [r"^/cp\s(?P<word>.+)"]
+    instance: ClassVar[Self]
 
     async def __setup(self):
         CPWord.instance = self

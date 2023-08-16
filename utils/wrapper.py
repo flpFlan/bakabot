@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from datetime import datetime, tzinfo
     from services.base import Service
 
-time_graph = defaultdict(lambda: 0.0)
+time_graph: defaultdict[Callable, float] = defaultdict(lambda: 0.0)
 
 
 def cool_down_for(seconds: float):
@@ -53,7 +53,9 @@ class Scheduled:
         def __init__(self, refer: None = None, *, forget: Literal[True], **kwargs):
             ...
 
-        def __init__(self, refer: Optional["Service"] = None, *, forget=False, **kwargs):
+        def __init__(
+            self, refer: Optional["Service"] = None, *, forget=False, **kwargs
+        ):
             if not forget:
                 assert refer is not None
                 self.refer = refer

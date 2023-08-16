@@ -1,9 +1,8 @@
-"""依赖https://github.com/Infiniticity/akinator.py"""
-
 # -- third party --
-from third_party.akinator import CantGoBackAnyFurther, AkiTimedOut
-from third_party.akinator.async_aki import Akinator as Aki
+from akinator import CantGoBackAnyFurther, AkiTimedOut
+from akinator.async_aki import Akinator as Aki
 from aiohttp import ClientSession, TCPConnector
+from typing_extensions import override
 
 # -- own --
 from .base import Game, GameBehavior, register_to_game
@@ -64,13 +63,14 @@ class Akinator(Game):
         await SendGroupMsg(self.group_id, m).do()
 
 
-class AkinatorBehavior(GameBehavior[Akinator]):
-    interested = [GroupMessage]
+class AkinatorBehavior(GameBehavior[Akinator, GroupMessage]):
     entrys = [r"^(?P<ans>是|不是|否|不知道|或许是|可能是|或许不是|可能不是|/back|/end)$"]
 
+    @override
     def check(self, evt: GroupMessage) -> bool:
         return (evt.user_id == self.game.owner_id) and self.filter(evt) is not None
 
+    @override
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return

@@ -1,3 +1,4 @@
+from typing_extensions import override
 from .base import Game, GameBehavior, register_to_game
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
@@ -26,8 +27,7 @@ class Roulette(Game):
         return f'现在进行初始化配置\n发送相关语句进行设置\n#设置弹巢数({self.blt_nst_num})\n#设置子弹数({self.blt_num})\n#设置禁言({self.set_ban and self.ban_duration})(单位:秒)\n(需管理权限)\n键入"*s"以开始游戏。'
 
 
-class RouletteInit(GameBehavior[Roulette]):
-    interested = [GroupMessage]
+class RouletteInit(GameBehavior[Roulette, GroupMessage]):
     entrys = [
         r"^\*s$",
         r"^设置(?P<action>弹巢数)(?P<arg>.+)",
@@ -35,9 +35,11 @@ class RouletteInit(GameBehavior[Roulette]):
         r"^设置(?P<action>禁言)(?P<arg>.+)",
     ]
 
+    @override
     def check(self, evt: GroupMessage) -> bool:
         return self.game.init_state and evt.group_id == self.game.group_id and self.filter(evt) is not None
 
+    @override
     async def handle(self, evt: GroupMessage):
         game = self.game
         if evt.message == "*s":
@@ -71,12 +73,13 @@ class RouletteInit(GameBehavior[Roulette]):
         await SendGroupMsg(evt.group_id, "设置不能→_→").do()
 
 
-class RouletteBehavior(GameBehavior[Roulette]):
-    interested = [GroupMessage]
+class RouletteBehavior(GameBehavior[Roulette, GroupMessage]):
 
+    @override
     def check(self, evt: GroupMessage) -> bool:
         return not self.game.init_state and evt.group_id == self.game.group_id and evt.message == "*s"
 
+    @override
     async def handle(self, evt: GroupMessage):
         blt_nst = self.game.blt_nst
         import random

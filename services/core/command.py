@@ -3,6 +3,7 @@ import asyncio
 import logging
 import importlib
 from inspect import ismodule
+from typing import Any
 
 # -- own --
 from .base import CoreService
@@ -38,7 +39,7 @@ class CommandCore(ServiceBehavior[Command], IMessageFilter):
         if not (r := self.filter(evt)):
             return
 
-        env = {}
+        env: dict[Any, Any] = {}
 
         def clear_group():
             async def clear():

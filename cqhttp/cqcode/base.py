@@ -1,7 +1,7 @@
 import re
 from inspect import getfullargspec
 from types import NoneType
-from typing import ClassVar, Type, TypeVar, Generic, get_type_hints, get_args
+from typing import ClassVar, Type, TypeVar, Generic, get_type_hints, get_args, Self
 from dataclasses import dataclass
 from cqhttp.events.message import Message
 from utils.algorithm import first
@@ -26,7 +26,7 @@ class CQCode(CQCodeData, Generic[_CQ]):
         )
 
     @classmethod
-    def select_from(cls, msg: str | Message) -> list[_CQ] | None:
+    def select_from(cls, msg: str | Message) -> list[Self] | None:
         if isinstance(msg, Message):
             msg = msg.message
         r = []
@@ -50,20 +50,20 @@ class CQCode(CQCodeData, Generic[_CQ]):
         if cls.pattern.search(msg):
             return True
         return False
+    
+    def decode(self) -> str:
+        return self.__str__()
 
     def __str__(self) -> str:
-        params = (f"{k}={v}" if v is not None else "" for k, v in vars(self).items())
-        if params := list(filter(lambda x: x != "", params)):
-            params = ",".join(params)
+        gnrtor = (f"{k}={v}" if v is not None else "" for k, v in vars(self).items())
+        if params_l := list(filter(lambda x: x != "", gnrtor)):
+            params = ",".join(params_l)
             return f"[CQ:{self.cq},{params}]"
         else:
             return f"[CQ:{self.cq}]"
 
     def __repr__(self) -> str:
         return self.__str__()
-
-    def __eq__(self, m: Message | str) -> bool:
-        return str(self) == str(m)
 
 
 def register_to_cqcodes(cls):

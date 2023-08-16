@@ -54,7 +54,7 @@ class SendManyPrivateMsg:
         self.message = message
         self.auto_escape = auto_escape
         self.echo = echo
-        self._interval = 3
+        self._interval = 3.
 
     def interval(self, interval: float):
         self._interval = interval

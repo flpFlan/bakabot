@@ -1,5 +1,6 @@
 # -- stdlib --
 import logging
+from typing import ClassVar, Self
 
 # -- third party --
 # -- own --
@@ -51,9 +52,9 @@ class ServiceControl(ServiceBehavior[CoreManager], IMessageFilter):
     async def handle(self, evt: GroupMessage):
         if not evt.user_id in ACCIO.bot.Administrators:
             return
-        if not (r := self.filter(evt)):
+        if not (rslt := self.filter(evt)):
             return
-        r = r.groupdict()
+        r = rslt.groupdict()
         if r.get("get"):
             await SendGroupMsg(evt.group_id, self.get_all_services()).do()
         elif s := r.get("service"):
@@ -102,6 +103,8 @@ class ServiceControl(ServiceBehavior[CoreManager], IMessageFilter):
 
 
 class BlockGroup(ServiceBehavior[CoreManager]):
+    instance: ClassVar[Self]
+
     async def __setup(self):
         await ACCIO.db.execute(
             "create table if not exists blockgroups (group_id integer unique)"
@@ -125,7 +128,9 @@ class BlockGroup(ServiceBehavior[CoreManager]):
         if group_id in blockgroups:
             log.warning("try to add group_id already exist")
             return
-        await ACCIO.db.execute("insert into blockgroups (group_id) values (?)", (group_id,))
+        await ACCIO.db.execute(
+            "insert into blockgroups (group_id) values (?)", (group_id,)
+        )
         blockgroups.add(group_id)
 
     async def delete(self, group_id: int):
@@ -133,5 +138,7 @@ class BlockGroup(ServiceBehavior[CoreManager]):
         if group_id not in blockgroups:
             log.warning("try to delete group_id not exist")
             return
-        await ACCIO.db.execute("delete from blockgroups where group_id = ?", (group_id,))
+        await ACCIO.db.execute(
+            "delete from blockgroups where group_id = ?", (group_id,)
+        )
         blockgroups.remove(group_id)

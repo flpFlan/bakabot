@@ -19,8 +19,6 @@ class DataBase:
     async def close(self):
         assert self.connection
         await self.connection.close()
-        self.connection = None
-        self.cursor = None
 
     async def execute(self, sql: str, params=None):
         assert self.cursor

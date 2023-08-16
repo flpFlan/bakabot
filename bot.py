@@ -41,13 +41,9 @@ class BotBehavior:
         is_before_post: bool,
         arg: Optional["ResponseBase"] = None,
     ):
-        if is_before_post:
-            p = (act, True, None)
-        else:
-            assert arg
-            p = (act, False, arg)
+        p = (act, True, None) if is_before_post else (act, False, arg)
         for service in self.bot.services:
-            await service.handle(p)
+            await service.handle(p) # type: ignore
 
     async def evt_loop(self):
         while True:
