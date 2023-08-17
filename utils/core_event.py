@@ -25,9 +25,11 @@ class CoreEvent:
 
     def __iadd__(self, func:Callable[[], Coroutine]):
         self.subscribe(func)
+        return self
 
     def __isub__(self, func:Callable[[], Coroutine]):
         self.unsubscribe(func)
+        return self
 
     def __call__(self,**payload):
         return self.invoke(**payload)
