@@ -1,5 +1,6 @@
 # -- stdlib --
 import asyncio
+from typing import TypeVar, Generic
 
 # -- third party --
 import requests
@@ -14,8 +15,10 @@ HEADERS = {
     "Connection": "keep-alive",
 }
 
-class Request:
+T = TypeVar("T", dict, list)
 
+
+class Request(Generic[T]):
     @classmethod
     def get(cls, url, *, params=None, headers=HEADERS, timeout=None):
         return asyncio.to_thread(
@@ -23,13 +26,18 @@ class Request:
         )
 
     @classmethod
-    def post(cls, url, data, *, headers=HEADERS, timeout=None):
+    def post(cls, url, data=None, json=None, *, headers=HEADERS, timeout=None):
         return asyncio.to_thread(
-            requests.post, url=url, data=data, headers=headers, timeout=timeout
+            requests.post,
+            url=url,
+            data=data,
+            json=json,
+            headers=headers,
+            timeout=timeout,
         )
 
     @classmethod
-    async def get_json(cls, url, *, params=None, headers=HEADERS, timeout=None) -> dict:
+    async def get_json(cls, url, *, params=None, headers=HEADERS, timeout=None) -> T:
         r = await cls.get(url, params=params, headers=headers, timeout=timeout)
         return r.json()
 
@@ -45,11 +53,15 @@ class Request:
             yield c
 
     @classmethod
-    async def post_json(cls, url, *, data=None, headers=HEADERS, timeout=None) -> dict:
-        r = await cls.post(url, data=data, headers=headers, timeout=timeout)
+    async def post_json(
+        cls, url, *, data=None, json=None, headers=HEADERS, timeout=None
+    ) -> T:
+        r = await cls.post(url, data=data, json=json, headers=headers, timeout=timeout)
         return r.json()
 
     @classmethod
-    async def post_text(cls, url, *, data=None, headers=HEADERS, timeout=None) -> str:
-        r = await cls.post(url, data=data, headers=headers, timeout=timeout)
+    async def post_text(
+        cls, url, *, data=None, json=None, headers=HEADERS, timeout=None
+    ) -> str:
+        r = await cls.post(url, data=data, json=json, headers=headers, timeout=timeout)
         return r.text

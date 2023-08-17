@@ -106,7 +106,7 @@ class SearchSongCore(ServiceBehavior[SearchSong], IMessageFilter):
             "limit": limit,
         }
         data = self.ep.search(text)
-        result = await Request.post_json(url, data=data,headers=self.headers)
+        result = await Request[dict].post_json(url, data=data,headers=self.headers)
         if "result" not in result:
             return "error"
         elif "songCount" not in result["result"]:

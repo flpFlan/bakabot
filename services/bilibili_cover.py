@@ -60,5 +60,5 @@ class BilibiliCoverCore(ServiceBehavior[BilibiliCover], IMessageFilter):
 
     async def get_b_cover(self, id, type="av"):
         url = f"https://apiv2.magecorn.com/bilicover/get?type={type}&id={id}&client=2.5.2"
-        r = await Request.get_json(url)
+        r = await Request[dict].get_json(url)
         return r.get("url", None)

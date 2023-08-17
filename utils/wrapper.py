@@ -1,5 +1,6 @@
 # -- stdlib --
 import time, inspect
+from functools import wraps
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Optional, overload
 
@@ -16,6 +17,7 @@ time_graph: defaultdict[Callable, float] = defaultdict(lambda: 0.0)
 
 def cool_down_for(seconds: float):
     def wrapper(func):
+        @wraps(func)
         async def _cfunc(*args, **kwargs):
             now_time = time.time()
             if now_time - time_graph[func] <= seconds:
@@ -23,6 +25,7 @@ def cool_down_for(seconds: float):
             time_graph[func] = now_time
             return await func(*args, **kwargs)
 
+        @wraps(func)
         def _func(*args, **kwargs):
             now_time = time.time()
             if now_time - time_graph[func] <= seconds:

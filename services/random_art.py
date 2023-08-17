@@ -55,7 +55,7 @@ class RandomArtCore(ServiceBehavior[RandomArt], IMessageFilter):
         if type == 0:
             key = ["img", "imgurl"]
             url = random.choice(urllist_0)
-            resonse = await Request.get_json(url)
+            resonse = await Request[dict].get_json(url)
             for i in key:
                 if i in resonse:
                     if resonse[i].startswith("//"):

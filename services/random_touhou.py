@@ -41,5 +41,5 @@ class RandomTouHouCore(ServiceBehavior[RandomTouHou], IMessageFilter):
 
     async def get_random_th(self, tag: str = ""):
         url = f"https://img.paulzzh.tech/touhou/random?type=json&site=all&size=all&tag={tag}"
-        r = await Request.get_json(url, timeout=10)
+        r = await Request[dict].get_json(url, timeout=10)
         return r["url"]

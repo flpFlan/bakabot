@@ -31,7 +31,7 @@ class ScreenshotCore(ServiceBehavior[DaXueXiScreenshot]):
 
     async def get_screenshot(self):
         req_url = "https://qczj.h5yunban.com/qczj-youth-learning/cgi-bin/common-api/course/current"
-        response = await Request.get_json(req_url)
+        response = await Request[dict].get_json(req_url)
         url = response["result"]["uri"]
         if url.find("index.html") != -1:
             url = url.replace("index.html", "images/end.jpg")

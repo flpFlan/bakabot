@@ -17,7 +17,7 @@ class BarberShop(Service):
         self.words = await self.get_words()
 
     async def get_words(self) -> list[str]:
-        r = await Request.get_json(url)
+        r = await Request[dict].get_json(url)
         return r["post"]
 
 
