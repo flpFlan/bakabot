@@ -15,7 +15,6 @@ from accio import ACCIO
 
 # -- code --
 log = logging.getLogger("bot.service.thbMessage")
-thb_notify_groups = set()
 
 
 ServerNames = {
@@ -33,8 +32,7 @@ class THBMessageNotify(Service):
         await ACCIO.db.execute(
             "create table if not exists thb_notify_groups (group_id integer unique)"
         )
-        global thb_notify_groups
-        self.thb_notify_groups = thb_notify_groups = await self.get_notify_group()
+        self.thb_notify_groups = await self.get_notify_group()
 
     async def get_notify_group(self) -> set[int]:
         await ACCIO.db.execute("select group_id from thb_notify_groups")

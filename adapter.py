@@ -1,5 +1,5 @@
 # -- stdlib --
-import json, logging,asyncio
+import json, logging, asyncio
 from dataclasses import fields
 from typing import Optional, TypeVar, TYPE_CHECKING
 
@@ -42,7 +42,7 @@ class CQHTTPAdapter:
             self.api_conn = await connect(
                 f"ws://{self.host}:{self.port}/api", ping_timeout=None
             )
-            self.api_lock=asyncio.Lock()
+            self.api_lock = asyncio.Lock()
             self.event_conn = conn
             await ACCIO.bot.behavior.evt_loop()
             await self.api_conn.close()
@@ -63,7 +63,7 @@ class CQHTTPAdapter:
         return await self._api(**params)
 
     async def _api(self, action: str, echo: Optional[str] = None, **params):
-        form = {}
+        form: dict = {}
         form["action"] = action
         if params:
             form["params"] = dict(**params)
@@ -87,7 +87,7 @@ class CQHTTPAdapter:
     @staticmethod
     def trans_action_to_json(act: "ApiAction") -> dict:
         fs = map(lambda x: x.name, fields(act))
-        result = {}
+        result: dict = {}
         for name, value in act.__dict__.items():
             if not name in fs:
                 continue
@@ -99,6 +99,6 @@ class CQHTTPAdapter:
                 result[name] = l
             else:
                 result[name] = value
-        action = getattr(act, "action", None)
+        action: str | None = getattr(act, "action", None)
         result["action"] = action
         return result

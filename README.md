@@ -197,7 +197,7 @@ Games
 - [x] 俄罗斯轮盘
 - [ ] 五子棋
 - [ ] 扫雷
-- [x] [Akinator](https://github.com/Infiniticity/akinator.py)
+- [x] Akinator
 
 扩展
 --------

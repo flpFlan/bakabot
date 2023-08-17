@@ -1,5 +1,6 @@
 # -- stdlib --
 import re
+from typing import cast
 
 # -- third party --
 import emoji
@@ -32,7 +33,7 @@ class EmojiMixCore(ServiceBehavior[EmojiMix], IMessageFilter):
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
             return
-        emoji1, emoji2 = r.group("emoji")
+        emoji1, emoji2 = cast(tuple[str, str], r.group("emoji"))
         self.format_emoji(emoji1)
         self.format_emoji(emoji2)
         try:

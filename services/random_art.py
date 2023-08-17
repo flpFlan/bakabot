@@ -55,7 +55,7 @@ class RandomArtCore(ServiceBehavior[RandomArt], IMessageFilter):
         if type == 0:
             key = ["img", "imgurl"]
             url = random.choice(urllist_0)
-            resonse = await Request.get_json(url)
+            resonse = await Request[dict].get_json(url)
             for i in key:
                 if i in resonse:
                     if resonse[i].startswith("//"):
@@ -70,14 +70,14 @@ class RandomArtCore(ServiceBehavior[RandomArt], IMessageFilter):
         for c in reversed(range(6)):
             data = {"str": tag, "id": 24 * random.randint(0, c)}
             url = f'https://www.duitang.com/napi/blogv2/list/by_search/?kw={data["str"]}&after_id={data["id"]}'
-            r = await Request.get_text(url, timeout=10)
-            if len(r) >= 50:
+            resp = await Request.get_text(url, timeout=10)
+            if len(resp) >= 50:
                 break
-        assert r  # type: ignore
-        if r.startswith("\ufeff"):
-            r = r.encode("utf-8")[3:].decode("utf-8")
-        r = json.loads(r)
-        if data := r.get("data", None):
+        assert resp  # type: ignore
+        if resp.startswith("\ufeff"):
+            resp = resp.encode("utf-8")[3:].decode("utf-8")
+        r = json.loads(resp)
+        if data := r.get("data"):
             if all_arts := data.get("object_list", None):
                 i = random.choice(all_arts)
                 return i["photo"]["path"].replace(".gif_jpeg", ".gif")

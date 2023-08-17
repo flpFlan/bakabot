@@ -64,7 +64,7 @@ class NowdayFortuneCore(ServiceBehavior[NowdayFortune]):
             schedule.hour(0).add(self.refresh_fortune)
 
     async def refresh_fortune(self):
-        self.service.clear
+        await self.service.clear()
 
     @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):

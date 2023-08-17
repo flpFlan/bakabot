@@ -1,5 +1,6 @@
 # -- stdlib --
 import time, inspect
+from functools import wraps
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Optional, overload
 
@@ -11,11 +12,12 @@ if TYPE_CHECKING:
     from datetime import datetime, tzinfo
     from services.base import Service
 
-time_graph = defaultdict(lambda: 0.0)
+time_graph: defaultdict[Callable, float] = defaultdict(lambda: 0.0)
 
 
 def cool_down_for(seconds: float):
     def wrapper(func):
+        @wraps(func)
         async def _cfunc(*args, **kwargs):
             now_time = time.time()
             if now_time - time_graph[func] <= seconds:
@@ -23,6 +25,7 @@ def cool_down_for(seconds: float):
             time_graph[func] = now_time
             return await func(*args, **kwargs)
 
+        @wraps(func)
         def _func(*args, **kwargs):
             now_time = time.time()
             if now_time - time_graph[func] <= seconds:
@@ -53,7 +56,9 @@ class Scheduled:
         def __init__(self, refer: None = None, *, forget: Literal[True], **kwargs):
             ...
 
-        def __init__(self, refer: Optional["Service"] = None, *, forget=False, **kwargs):
+        def __init__(
+            self, refer: Optional["Service"] = None, *, forget=False, **kwargs
+        ):
             if not forget:
                 assert refer is not None
                 self.refer = refer

@@ -1,4 +1,5 @@
 # -- stdlib --
+from abc import abstractmethod, ABC
 from collections import defaultdict
 import logging
 from typing import ClassVar, Generic, Type, TypeVar, get_args
@@ -14,7 +15,7 @@ from utils import chronos
 
 # -- code --
 log = logging.getLogger("bot.service.game")
-all_games:dict[str,"Game"] = {}
+all_games: dict[str, "Game"] = {}
 
 
 class Game:
@@ -28,7 +29,8 @@ class Game:
         self._behavior = [bhv(self) for bhv in self.__class__.behaviors]
 
         async def t():
-            await SendGroupMsg(self.group_id, f"长时间未操作，游戏结束。({self.owner_id})").do()
+            if not self.game_over:
+                await SendGroupMsg(self.group_id, f"长时间未操作，游戏结束。({self.owner_id})").do()
             self.kill()
 
         with Scheduled.Date(forget=True) as schedule:
@@ -87,11 +89,13 @@ TGame = TypeVar("TGame", bound=Game)
 TCQHTTPEvent = TypeVar("TCQHTTPEvent", bound=CQHTTPEvent)
 
 
-class GameBehavior(Generic[TGame], IMessageFilter):
-    interested: ClassVar[list[Type[CQHTTPEvent]]]
+class GameBehavior(Generic[TGame,TCQHTTPEvent], IMessageFilter, ABC):
+    interested: ClassVar[tuple[Type[CQHTTPEvent],...]]
 
     def __init_subclass__(cls):
-        game_t = get_args(cls.__orig_bases__[0])[0] # type: ignore
+        type_args = get_args(getattr(cls,"__orig_bases__")[0])
+        cls.interested = get_args(type_args[1])
+        game_t = type_args[0]
         assert not hasattr(game_t, "__args__")  # cann't be union
         assert issubclass(game_t, Game)
         if not vars(game_t).get("behaviors"):
@@ -101,15 +105,17 @@ class GameBehavior(Generic[TGame], IMessageFilter):
 
     def __init__(self, game: TGame):
         self.game = game
-
-    def check(self, evt: CQHTTPEvent) -> bool:
+    
+    @abstractmethod
+    def check(self, evt: TCQHTTPEvent) -> bool:
         ...  # to override it
 
-    async def handle(self, evt: CQHTTPEvent):
+    @abstractmethod
+    async def handle(self, evt: TCQHTTPEvent):
         ...
 
     async def _callback(self, arg):
-        ...
+        pass
 
 
 class GameManager(Service):
@@ -131,10 +137,14 @@ class ManagerCore(ServiceBehavior[GameManager], IMessageFilter):
                 if g := self.game_graph.get(game, None):
                     if i := ManagerCore.games[group_id].get(user_id, None):
                         i.kill()
-                    ManagerCore.games[group_id][user_id] = await g.create_instance(group_id, user_id)
+                    ManagerCore.games[group_id][user_id] = await g.create_instance(
+                        group_id, user_id
+                    )
                     return
         for group_id in ManagerCore.games:
-            for game in [*ManagerCore.games[group_id].values()]: #NOTE: 防止迭代过程中games被修改
+            for game in [
+                *ManagerCore.games[group_id].values()
+            ]:  # NOTE: 防止迭代过程中games被修改
                 await game.process_evt(evt)
 
 

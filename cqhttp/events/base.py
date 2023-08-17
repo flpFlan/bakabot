@@ -1,6 +1,7 @@
 # -- stdlib --
 from collections import defaultdict
-from typing import ClassVar, Type
+from typing import ClassVar, Type, Self
+from abc import ABC
 
 # -- third party --
 # -- own --
@@ -12,21 +13,23 @@ from cqhttp.base import Event
 def nested_dict():
     return defaultdict(nested_dict)
 
+
 class DotDict:
-    def __init__(self, d:dict):
+    def __init__(self, d: dict):
         self.__model = d
 
     def __getattr__(self, name):
-        item=self.__model.get(name) #NOTE:考虑到Optional字段，这里用get而不是下标
+        item = self.__model.get(name)  # NOTE:考虑到Optional字段，这里用get而不是下标
         if isinstance(item, dict):
-            item=DotDict(item)
+            item = DotDict(item)
         elif isinstance(item, list):
-            item=[DotDict(i) if isinstance(i, dict) else i for i in item]
+            item = [DotDict(i) if isinstance(i, dict) else i for i in item]
         setattr(self, name, item)
         return item
 
-class CQHTTPEvent(Event, DotDict):
-    classes: ClassVar[dict] = nested_dict()
+
+class CQHTTPEvent(Event, DotDict, ABC):
+    classes: ClassVar[dict] = nested_dict() # type: ignore
 
     post_type: str
     time: int
@@ -64,7 +67,7 @@ class CQHTTPEvent(Event, DotDict):
         return evt
 
     @classmethod
-    def get_real_types(cls) -> list[Type["CQHTTPEvent"]]:
+    def get_real_types(cls) -> list[Type[Self]]:
         """get sub_events that can be actually delivered by go-cqhttp"""
         subs = []
         if cls in Event.classes:

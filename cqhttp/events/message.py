@@ -86,7 +86,7 @@ class GroupMessage(Message):
 
     message_type: str = "group"
 
-    sender: Sender
+    sender: Sender # type: ignore
     group_id: int
     anonymous: Optional[Anonymous]
 

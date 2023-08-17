@@ -30,6 +30,7 @@ from .roll import Roll
 from .poke_back import PokeBack
 from .echo import Echo
 from .take_back_msg import TakeBackMsg
+from .compiler_explorer import CompilerExplorer
 # from .thb_message_notify import THBMessageNotify
 
 # from .game import *

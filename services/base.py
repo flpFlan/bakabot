@@ -3,10 +3,10 @@ import asyncio
 from asyncio import Queue
 import inspect
 import logging
-from re import Match, compile, RegexFlag
+from re import Match, compile, RegexFlag, Pattern
 from collections import defaultdict
 from typing import Callable, ClassVar, Coroutine, Generic, List, Literal, Self
-from typing import Tuple, Type, TypeVar
+from typing import Tuple, Type, TypeVar, cast
 from typing import TYPE_CHECKING, get_args, overload, DefaultDict
 
 # -- own --
@@ -174,13 +174,13 @@ class ServiceBehavior(Generic[_TService]):
                         act_after_handlers[evt_t].append(f)
         self._cqevt_handlers: DefaultDict[
             Type[CQHTTPEvent], List[_C_Handler]
-        ] = cqevt_handlers
+        ] = cqevt_handlers  # type: ignore
         self._act_after_handlers: DefaultDict[
             Type[ApiAction], List[_A_Handler]
-        ] = act_after_handlers
+        ] = act_after_handlers  # type: ignore
         self._act_before_handlers: DefaultDict[
             Type[ApiAction], List[_B_Handler]
-        ] = act_before_handlers
+        ] = act_before_handlers  # type: ignore
         self.service = service
         self.set_activity(False)
 
@@ -216,8 +216,8 @@ class ServiceBehavior(Generic[_TService]):
                     t = [asyncio.create_task(f(e)) for f in fs]
             else:
                 assert arg
-                if fs := self._act_after_handlers.get(e.__class__):
-                    t = [asyncio.create_task(f(e, arg)) for f in fs]
+                if fs := self._act_after_handlers.get(e.__class__): # type: ignore
+                    t = [asyncio.create_task(f(e, arg)) for f in fs] # type: ignore
         if t:
             await asyncio.wait(t)
 
@@ -246,7 +246,7 @@ class CQHTTPEventHub(EventHub, Generic[_TCQHTTPEvent]):
     @staticmethod
     def add_listener(f: _C_Class_Handler):
         attr_old = getattr(f, "cqevt_entrypoint", ())
-        attr_new: set[Type[CQHTTPEvent]] = set([*CQHTTPEventHub._type, *attr_old])
+        attr_new: set[Type[CQHTTPEvent]] = set([*CQHTTPEventHub._type, *attr_old])  # type: ignore
         real_types = set()
         for evt_t in attr_new:
             for e in evt_t.get_real_types():
@@ -269,7 +269,7 @@ class ApiActionHub(EventHub, Generic[_TApiAction]):
         @staticmethod
         def add_listener(f: _B_Class_Handler):
             attr_old = getattr(f, "act_before_entrypoint", ())
-            attr_new: set[Type[ApiAction]] = set([*ApiActionHub._type, *attr_old])
+            attr_new: set[Type[ApiAction]] = set([*ApiActionHub._type, *attr_old])  # type: ignore
             real_types = set()
             for evt_t in attr_new:
                 for e in evt_t.get_real_types():
@@ -281,7 +281,7 @@ class ApiActionHub(EventHub, Generic[_TApiAction]):
         @staticmethod
         def add_listener(f: _A_Class_Handler):
             attr_old = getattr(f, "act_after_entrypoint", ())
-            attr_new: set[Type[ApiAction]] = set([*ApiActionHub._type, *attr_old])
+            attr_new: set[Type[ApiAction]] = set([*ApiActionHub._type, *attr_old])  # type: ignore
             real_types = set()
             for evt_t in attr_new:
                 for e in evt_t.get_real_types():
@@ -339,7 +339,7 @@ class OnEvent(metaclass=_META):
 
 
 class IMessageFilter:
-    entrys = []
+    entrys: list[str | Pattern[str]] = []
     entry_flags = RegexFlag.NOFLAG
 
     def filter(self, evt: "Message") -> Match[str] | None:
@@ -349,10 +349,12 @@ class IMessageFilter:
         def filter(evt: "Message") -> Match[str] | None:
             msg = evt.message
             for _entry in self.entrys:
+                _entry = cast(Pattern[str], _entry)
                 if match := _entry.match(msg):
                     return match
+            return None
 
-        self.filter = filter
+        self.filter = filter  # type: ignore
         return self.filter(evt)
 
 

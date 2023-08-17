@@ -23,11 +23,11 @@ class CoreEvent:
     def unsubscribe(self, suber: Callable[[], Coroutine]):
         self.subers.remove(suber)
 
-    def __add__(self, func:Callable[[], Coroutine]):
+    def __iadd__(self, func:Callable[[], Coroutine]):
         self.subscribe(func)
         return self
 
-    def __sub__(self, func:Callable[[], Coroutine]):
+    def __isub__(self, func:Callable[[], Coroutine]):
         self.unsubscribe(func)
         return self
 

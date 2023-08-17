@@ -2,6 +2,7 @@
 import asyncio
 import logging, os
 from typing import TYPE_CHECKING, Literal, Optional, TypeVar, overload
+from inspect import isabstract
 
 # -- own --
 from adapter import CQHTTPAdapter
@@ -41,13 +42,9 @@ class BotBehavior:
         is_before_post: bool,
         arg: Optional["ResponseBase"] = None,
     ):
-        if is_before_post:
-            p = (act, True, None)
-        else:
-            assert arg
-            p = (act, False, arg)
+        p = (act, True, None) if is_before_post else (act, False, arg)
         for service in self.bot.services:
-            await service.handle(p)
+            await service.handle(p) # type: ignore
 
     async def evt_loop(self):
         while True:
@@ -98,7 +95,7 @@ class Bot:
         from services.base import Service
 
         # NOTE: don't use asyncio.gather, to delay __setup
-        g = [await s.create_instance() for s in Service.get_classes()]
+        g = [await s.create_instance() for s in Service.get_classes() if not isabstract(s)]
         self.services.extend(g)
 
         for s in self.services:

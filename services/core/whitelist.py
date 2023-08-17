@@ -1,5 +1,6 @@
 # -- stdlib --
 import logging
+from typing import ClassVar, Self
 
 # -- own --
 from .base import CoreService
@@ -17,6 +18,8 @@ whitelist: set[int] = set()
 
 
 class WhiteList(CoreService):
+    instance: ClassVar[Self]
+
     async def __setup(self):
         WhiteList.instance = self
         await ACCIO.db.execute(
@@ -32,7 +35,9 @@ class WhiteList(CoreService):
         if group_id in whitelist:
             log.warning("try to add group_id already exist")
             return
-        await ACCIO.db.execute("insert into whitelist (group_id) values (?)", (group_id,))
+        await ACCIO.db.execute(
+            "insert into whitelist (group_id) values (?)", (group_id,)
+        )
         whitelist.add(group_id)
 
     async def delete(self, group_id: int):
@@ -83,6 +88,6 @@ class BlockGroup(ServiceBehavior[WhiteList]):
 
     @OnEvent[CQHTTPEvent].add_listener
     async def handle(self, evt: CQHTTPEvent):
-        if group_id:=getattr(evt, "group_id", None):
+        if group_id := getattr(evt, "group_id", None):
             if group_id not in self.whitelist:
                 evt.cancel()
