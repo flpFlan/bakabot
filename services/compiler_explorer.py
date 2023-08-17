@@ -20,7 +20,7 @@ class Language:
             "assembly": "nasm21402",
             "csharp": "dotnet707csharp",
             "c": "cg132",
-            "cpp": "g132",
+            "c++": "g132",
             "go": "gl1200",
             "java": "java2000",
             "python": "python311",
@@ -47,7 +47,7 @@ class CompilerExplorer(Service):
 
 
 class CompilerExplorerCore(ServiceBehavior[CompilerExplorer], IMessageFilter):
-    entrys = [r"^/run (?P<lang>.+)\s+(?P<code>.*)"]
+    entrys = [r"^/run (?P<lang>\S+)\s*(?P<params>(\s*--\S+ \S+)+)?\s+(?P<code>[\s\S]*)"]
 
     async def __setup(self):
         headers = {"Accept": "application/json"}
@@ -80,30 +80,59 @@ class CompilerExplorerCore(ServiceBehavior[CompilerExplorer], IMessageFilter):
         if lang not in self.avilable_langs:
             m = "不支持这个语言"
         else:
-            m = await self.compile(code, lang)
+            args: dict[str, str] = {}
+            if params := r.group("params"):
+                params = filter(None, map(lambda x: x.strip(), params.split("--")))
+                for param in params:
+                    args |= dict([param.split()])
+            m = await self.compile(code, lang, **args)
         await SendGroupMsg(evt.group_id, message=m).do()
 
+    @OnEvent[GroupMessage].add_listener
+    async def get_list(self, evt: GroupMessage):
+        if evt.message.startswith("/lang"):
+            m = ", ".join(self.avilable_langs.keys())
+            await SendGroupMsg(evt.group_id, message=m).do()
+        elif evt.message.startswith("/compiler"):
+            lang = evt.message[9:].strip().lower()
+            if lang not in self.avilable_langs:
+                m = "不支持这个语言"
+            else:
+                m = ", ".join(self.avilable_langs[lang].compilers.avilable) or "None"
+                if len(m) > 3666:
+                    m = m[:1500] + " ..."
+            await SendGroupMsg(evt.group_id, message=m).do()
+
     async def compile(
-        self, code: str, lang: str, *, compiler: OptStr = None, input: str = ""
+        self,
+        code: str,
+        lang: str,
+        *,
+        compiler: OptStr = None,
+        input: OptStr = None,
+        args: OptStr = None,
+        u_args: str = "",
+        lib: OptStr = None,
+        **kwargs,
     ):
         compiler = compiler or self.avilable_langs[lang].compilers.default
         if not compiler:
             return "没有指定编译器"
         if compiler not in self.avilable_langs[lang].compilers.avilable:
             return "没有这个编译器"
-        form = {
+        form: dict = {
             "source": code,
             "compiler": compiler,
             "options": {
-                "userArguments": "-O3",
+                "userArguments": u_args,
                 "executeParameters": {
-                    "args": "",
-                    "stdin": input,
+                    "args": args.split("::") if args else [],
+                    "stdin": input and "\n".join(input.split("::")),
                 },
                 "compilerOptions": {"executorRequest": True},
                 "filters": {"execute": True},
                 "tools": [],
-                "libraries": [],
+                "libraries": lib.split("::") if lib else [],
             },
             "lang": lang,
             "allowStoreCodeDebug": True,
@@ -115,12 +144,17 @@ class CompilerExplorerCore(ServiceBehavior[CompilerExplorer], IMessageFilter):
             headers=headers,
             json=form,
         )
-
-        rslt = "stdout:\n"
-        for line in r["stdout"]:
-            rslt += f'{line["text"]}\n'
-        rslt += "stderr:\n"
-        for line in r["stderr"]:
-            rslt += f'{line["text"]}\n'
-        rslt += f"execTime: {r['execTime']}"
-        return rslt
+        rslt = ""
+        if stdout := r.get("stdout"):
+            rslt += "stdout:\n"
+            for line in stdout:
+                rslt += f'{line["text"]}\n'
+            rslt += "\n"
+        if stderr := r.get("stderr"):
+            rslt += "stderr:\n"
+            for line in stderr:
+                rslt += f'{line["text"]}\n'
+            rslt += "\n"
+        if execTime := r.get("execTime"):
+            rslt += f"execTime: {execTime}"
+        return rslt.rstrip()

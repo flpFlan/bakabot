@@ -73,7 +73,6 @@ class RandomArtCore(ServiceBehavior[RandomArt], IMessageFilter):
             resp = await Request.get_text(url, timeout=10)
             if len(resp) >= 50:
                 break
-        assert resp  # type: ignore
         if resp.startswith("\ufeff"):
             resp = resp.encode("utf-8")[3:].decode("utf-8")
         r = json.loads(resp)
