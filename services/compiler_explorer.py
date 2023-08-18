@@ -1,5 +1,5 @@
 # -- stdlib --
-import asyncio
+import asyncio, re
 from typing import ClassVar
 from collections.abc import Iterable
 
@@ -53,8 +53,8 @@ doc = """
 [--input <input>]
 <code>
 参数:
-    lang: 语言
-    compiler: 编译器
+    lang: 语言，可通过/lang查看
+    compiler: 编译器，可通过/compiler <lang>查看
     args: 编译参数
     u_args: 用户参数
     lib: 链接库
@@ -72,6 +72,7 @@ class CompilerExplorer(Service):
 
 class CompilerExplorerCore(ServiceBehavior[CompilerExplorer], IMessageFilter):
     entrys = [r"^/run (?P<lang>\S+)(?P<params>(?:\s*^--\S+ .+$)+)?\s+(?P<code>[\s\S]*)"]
+    entry_flags = re.MULTILINE
 
     async def __setup(self):
         headers = {"Accept": "application/json"}
