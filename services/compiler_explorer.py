@@ -53,8 +53,8 @@ doc = """
 [--input <input>]
 <code>
 参数:
-    lang: 语言
-    compiler: 编译器
+    lang: 语言，可通过/lang查看
+    compiler: 编译器，可通过/compiler <lang>查看
     args: 编译参数
     u_args: 用户参数
     lib: 链接库
