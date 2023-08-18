@@ -1,5 +1,5 @@
 # -- stdlib --
-import asyncio
+import asyncio, re
 from typing import ClassVar
 from collections.abc import Iterable
 
@@ -72,6 +72,7 @@ class CompilerExplorer(Service):
 
 class CompilerExplorerCore(ServiceBehavior[CompilerExplorer], IMessageFilter):
     entrys = [r"^/run (?P<lang>\S+)(?P<params>(?:\s*^--\S+ .+$)+)?\s+(?P<code>[\s\S]*)"]
+    entry_flags = re.MULTILINE
 
     async def __setup(self):
         headers = {"Accept": "application/json"}
