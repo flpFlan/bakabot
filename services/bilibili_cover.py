@@ -35,8 +35,20 @@ def av_to_bv(x: int) -> str:
     return "".join(r)
 
 
+doc = """
+格式:
+    b站封面获取 [<type>] <id>
+参数:
+    type: 类型
+    id: id
+用例:
+    b站封面获取 av123456
+""".strip()
+
+
 class BilibiliCover(Service):
-    pass
+    name = "b站封面获取"
+    doc = doc
 
 
 class BilibiliCoverCore(ServiceBehavior[BilibiliCover], IMessageFilter):
@@ -59,6 +71,8 @@ class BilibiliCoverCore(ServiceBehavior[BilibiliCover], IMessageFilter):
         await SendGroupMsg(group_id, m).do()
 
     async def get_b_cover(self, id, type="av"):
-        url = f"https://apiv2.magecorn.com/bilicover/get?type={type}&id={id}&client=2.5.2"
+        url = (
+            f"https://apiv2.magecorn.com/bilicover/get?type={type}&id={id}&client=2.5.2"
+        )
         r = await Request[dict].get_json(url)
         return r.get("url", None)

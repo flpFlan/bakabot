@@ -9,7 +9,7 @@ from cqhttp.api.message.SendMsg import SendMsg, Response as R2
 
 
 class MessageFailedEcho(Service):
-    pass
+    doc = """消息发送失败时回调"""
 
 
 class MessageFailedEchoCore(ServiceBehavior[MessageFailedEcho]):

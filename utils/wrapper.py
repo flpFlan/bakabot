@@ -1,5 +1,5 @@
 # -- stdlib --
-import time, inspect
+import time, inspect, logging
 from functools import wraps
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Optional, overload
@@ -41,6 +41,9 @@ def cool_down_for(seconds: float):
     return wrapper
 
 
+logging.getLogger("apscheduler").setLevel(logging.WARNING)
+
+
 class Scheduled:
     _scheduler: ClassVar[AsyncIOScheduler] = AsyncIOScheduler()
     _scheduler.start()
@@ -72,6 +75,8 @@ class Scheduled:
             ...
 
         def add(self, f: Callable):
+            if not self.forget:
+                logging.getLogger("apscheduler").setLevel(logging.INFO)
             job = Scheduled._scheduler.add_job(f, self.__class__.trigger, **self._args)
             if not self.forget:
 
@@ -83,6 +88,7 @@ class Scheduled:
 
                 self.refer.OnBeforeShutDown += pause
                 self.refer.OnAfterStart += resume
+                logging.getLogger("apscheduler").setLevel(logging.WARNING)
             return job
 
         def timezone(self, t: "tzinfo | str"):

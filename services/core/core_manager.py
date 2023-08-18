@@ -65,6 +65,7 @@ class ServiceControl(ServiceBehavior[CoreManager], IMessageFilter):
             await self.start_service(evt.group_id, s)
 
     def get_all_services(self):
+        # FIXME: missing condition: whether the service is blocked in this group
         l = [
             f"{service.name}: {'🟢'if service.get_activity()else '🔴'}"
             for service in ACCIO.bot.services
@@ -73,11 +74,12 @@ class ServiceControl(ServiceBehavior[CoreManager], IMessageFilter):
 
     def get_help(self, service):
         for s in ACCIO.bot.services:
-            if s.name == service:
-                return s.descrition
+            if s.name.lower() == service.lower():
+                return s.doc
         return "Unknown service"
 
     async def close_service(self, group_id, service):
+        #TODO: ban service individually
         to_close = [s for s in ACCIO.bot.services if s.name == service]
         if not to_close:
             await SendGroupMsg(group_id, "Unknown service").do()
@@ -110,7 +112,7 @@ class BlockGroup(ServiceBehavior[CoreManager]):
             "create table if not exists blockgroups (group_id integer unique)"
         )
         self.blockgroups = await self.get()
-        BlockGroup.instance = self
+        self.__class__.instance = self
 
     @OnEvent[CQHTTPEvent].add_listener
     async def handle(self, evt: CQHTTPEvent):

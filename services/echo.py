@@ -14,6 +14,8 @@ from .game.base import ManagerCore
 
 
 class Echo(Service):
+    doc = """打断复读"""
+
     async def __setup(self):
         self.msg_graph: dict[int, list[str | None]] = defaultdict(lambda: [None, None])
 

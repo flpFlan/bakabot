@@ -10,9 +10,24 @@ from .bilibili_cover import av_to_bv, bv_to_av
 
 # -- code --
 
+doc = """
+描述:
+    将av/bv号转换为bv/av号
+格式:
+    av号转换 <av号>
+    bv号转换 <bv号>
+参数:
+    av号: av号
+    bv号: bv号
+用例:
+    av号转换 av123456
+    bv号转换 BV1s5411K7d7
+""".strip()
+
 
 class BilibiliABTrans(Service):
-    pass
+    name = "A/BV号转换"
+    doc = doc
 
 
 class BilibiliABTransCore(ServiceBehavior[BilibiliABTrans], IMessageFilter):

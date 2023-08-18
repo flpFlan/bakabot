@@ -10,9 +10,18 @@ from cqhttp.cqcode import At
 
 # -- code --
 
+doc = """
+描述:
+    帮你做选择
+格式:
+    选择<选项1>还是<选项2>[还是<选项3>...]
+用例:
+    选择1还是2
+""".strip()
+
 
 class ChooseOr(Service):
-    pass
+    doc = doc
 
 
 class ChooseOrCore(ServiceBehavior[ChooseOr], IMessageFilter):

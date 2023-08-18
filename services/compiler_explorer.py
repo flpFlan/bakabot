@@ -1,6 +1,7 @@
 # -- stdlib --
 import asyncio
 from typing import ClassVar
+from collections.abc import Iterable
 
 # -- third party --
 # -- own --
@@ -42,12 +43,35 @@ class Language:
         self.compilers = self.__class__.Compilers()
 
 
+doc = """
+格式:
+/run <lang>
+[--compiler <compiler>]
+[--args <args>]
+[--u_args <u_args>]
+[--lib <lib>]
+[--input <input>]
+<code>
+参数:
+    lang: 语言
+    compiler: 编译器
+    args: 编译参数
+    u_args: 用户参数
+    lib: 链接库
+    input: 输入
+示例:
+/run python --input Hello World!
+print(input('echo: '))
+""".strip()
+
+
 class CompilerExplorer(Service):
-    pass
+    name = "Run Code"
+    doc = doc
 
 
 class CompilerExplorerCore(ServiceBehavior[CompilerExplorer], IMessageFilter):
-    entrys = [r"^/run (?P<lang>\S+)\s*(?P<params>(\s*--\S+ \S+)+)?\s+(?P<code>[\s\S]*)"]
+    entrys = [r"^/run (?P<lang>\S+)(?P<params>(?:\s*^--\S+ .+$)+)?\s+(?P<code>[\s\S]*)"]
 
     async def __setup(self):
         headers = {"Accept": "application/json"}
@@ -71,6 +95,27 @@ class CompilerExplorerCore(ServiceBehavior[CompilerExplorer], IMessageFilter):
 
         asyncio.create_task(task())
 
+    def parse_args(self, args: Iterable) -> dict:
+        rslt: dict = {
+            "compiler": None,
+            "args": [],
+            "u_args": "",
+            "lib": [],
+            "input": None,
+        }
+        for arg in args:
+            if arg.startswith("--compiler"):
+                rslt["compiler"] = arg[11:]
+            elif arg.startswith("--args"):
+                rslt["args"].extend(arg[7:].split(" "))
+            elif arg.startswith("--u_args"):
+                rslt["u_args"] = arg[9:]
+            elif arg.startswith("--lib"):
+                rslt["lib"].extend(arg[6:].split(" "))
+            elif arg.startswith("--input"):
+                rslt["input"] += arg[8:] + "\n"
+        return rslt
+
     @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
         if not (r := self.filter(evt)):
@@ -80,12 +125,9 @@ class CompilerExplorerCore(ServiceBehavior[CompilerExplorer], IMessageFilter):
         if lang not in self.avilable_langs:
             m = "不支持这个语言"
         else:
-            args: dict[str, str] = {}
             if params := r.group("params"):
-                params = filter(None, map(lambda x: x.strip(), params.split("--")))
-                for param in params:
-                    args |= dict([param.split()])
-            m = await self.compile(code, lang, **args)
+                params = filter(None, map(lambda x: x.rstrip("\n"), params.split("--")))
+            m = await self.compile(code, lang, **self.parse_args(params or []))
         await SendGroupMsg(evt.group_id, message=m).do()
 
     @OnEvent[GroupMessage].add_listener
@@ -104,16 +146,7 @@ class CompilerExplorerCore(ServiceBehavior[CompilerExplorer], IMessageFilter):
             await SendGroupMsg(evt.group_id, message=m).do()
 
     async def compile(
-        self,
-        code: str,
-        lang: str,
-        *,
-        compiler: OptStr = None,
-        input: OptStr = None,
-        args: OptStr = None,
-        u_args: str = "",
-        lib: OptStr = None,
-        **kwargs,
+        self, code: str, lang: str, *, compiler, input, args, u_args, lib
     ):
         compiler = compiler or self.avilable_langs[lang].compilers.default
         if not compiler:
@@ -126,13 +159,13 @@ class CompilerExplorerCore(ServiceBehavior[CompilerExplorer], IMessageFilter):
             "options": {
                 "userArguments": u_args,
                 "executeParameters": {
-                    "args": args.split("::") if args else [],
-                    "stdin": input and "\n".join(input.split("::")),
+                    "args": args,
+                    "stdin": input or None,
                 },
                 "compilerOptions": {"executorRequest": True},
                 "filters": {"execute": True},
                 "tools": [],
-                "libraries": lib.split("::") if lib else [],
+                "libraries": lib,
             },
             "lang": lang,
             "allowStoreCodeDebug": True,

@@ -11,9 +11,15 @@ from cqhttp.cqcode import Image
 
 # -- code --
 
+doc = """
+描述:
+    生成本周青年大学习截图
+""".strip()
+
 
 class DaXueXiScreenshot(Service):
     name = "青年大学习截图生成"
+    doc = doc
 
 
 class ScreenshotCore(ServiceBehavior[DaXueXiScreenshot]):

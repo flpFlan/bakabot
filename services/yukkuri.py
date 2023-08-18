@@ -23,11 +23,20 @@ TYPE = {
     "8": "r1",
 }
 
+doc = """
+格式:
+    油库里[<type>]<content>
+参数:
+    type: 类型，1-8的数值，默认1
+    content: 内容
+用例:
+    油库里跟瓦格啊我噶哇嘎嘎
+""".strip()
+
 
 class Yukkuri(Service):
-    """食用方法：油库里 + 1-8(可选，表示音源种类) + 文本"""
-
     name = "油库里"
+    doc = doc
 
 
 class YukkuriCore(ServiceBehavior[Yukkuri], IMessageFilter):

@@ -45,14 +45,14 @@ _C_Handler = Callable[[_TCQHTTPEvent], Coroutine[None, None, None]]
 
 class Service:
     name: ClassVar[str] = ""
-    descrition: ClassVar[str] = ""
+    doc: ClassVar[str] = ""
     behaviors: ClassVar[
         list[Type["ServiceBehavior"]]
     ]  # override it to make behaviors sync
 
     def __init_subclass__(cls):
         cls.name = cls.name or cls.__name__
-        cls.descrition = cls.descrition or cls.__doc__ or ""
+        cls.doc = cls.doc or cls.__doc__ or "No Docment"
 
     def __init__(self):
         """Service cann't be instantiated directly, use Service.create_instance instead"""
