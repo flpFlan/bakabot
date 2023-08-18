@@ -50,8 +50,6 @@ class ServiceControl(ServiceBehavior[CoreManager], IMessageFilter):
 
     @OnEvent[GroupMessage].add_listener
     async def handle(self, evt: GroupMessage):
-        if not evt.user_id in ACCIO.bot.Administrators:
-            return
         if not (rslt := self.filter(evt)):
             return
         r = rslt.groupdict()
@@ -60,8 +58,12 @@ class ServiceControl(ServiceBehavior[CoreManager], IMessageFilter):
         elif s := r.get("service"):
             await SendGroupMsg(evt.group_id, self.get_help(s)).do()
         elif s := r.get("service_to_close"):
+            if not evt.user_id in ACCIO.bot.Administrators:
+                return
             await self.close_service(evt.group_id, s)
         elif s := r.get("service_to_start"):
+            if not evt.user_id in ACCIO.bot.Administrators:
+                return
             await self.start_service(evt.group_id, s)
 
     def get_all_services(self):

@@ -8,11 +8,21 @@ from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
 # -- code --
 
+doc = """
+格式:
+    .r <arg> [+ <arg> ...]
+参数:
+    <arg>: 骰子或常数
+    骰子: <count>d<limit>
+    常数: <number>
+用例:
+    .r1d100+1d20+1d10+10
+""".strip()
+
 
 class Roll(Service):
     name = "Roll点"
-    doc = "食用方法：.r + 骰的面数几个数，可选，默认为1d100\n"
-    "例：.r 1d100+1d20+1d10+1d6+1d4+1d3+1d2"
+    doc = doc
 
 
 class RollCore(ServiceBehavior[Roll], IMessageFilter):

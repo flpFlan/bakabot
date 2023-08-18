@@ -119,7 +119,7 @@ class GameBehavior(Generic[TGame,TCQHTTPEvent], IMessageFilter, ABC):
 
 
 class GameManager(Service):
-    pass
+    doc = "格式: /game <game>，具体请参考https://github.com/flpFlan/bakabot"
 
 
 class ManagerCore(ServiceBehavior[GameManager], IMessageFilter):
