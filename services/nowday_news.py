@@ -14,7 +14,7 @@ from cqhttp.cqcode import Image
 
 
 class NowdayNews(Service):
-    pass
+    name = "读懂世界"
 
 
 class NowdayNewsCore(ServiceBehavior[NowdayNews]):

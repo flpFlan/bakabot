@@ -16,7 +16,8 @@ from cqhttp.cqcode import Image
 
 
 class SearchImage(Service):
-    pass
+    name = "搜图"
+    doc = """出了点问题，以后再修。"""
 
 
 class SearchImageCore(ServiceBehavior[SearchImage], IMessageFilter):

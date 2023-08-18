@@ -54,6 +54,16 @@ class CommandCore(ServiceBehavior[Command], IMessageFilter):
 
             asyncio.create_task(clear())
 
+        #TODO: ban service globally
+        # def ban_service(service):
+        #     async def ban():
+        #         from services.core.whitelist import whitelist
+        #         for s in ACCIO.bot.services:
+        #             if s.name == service and s.get_activity():
+        #                 await s.shutdown()
+                
+        #     asyncio.create_task(ban())
+
         env["clear_group"] = clear_group
 
         if isinstance(evt, GroupMessage):

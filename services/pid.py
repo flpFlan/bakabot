@@ -15,9 +15,21 @@ from accio import ACCIO
 PID_PATH = ACCIO.conf.get("Service.Pid", "path")
 PID_URL = ACCIO.conf.get("Service.Pid", "url")
 
+doc = """
+描述:
+    通过pid获取p站图片
+格式:
+    pid <pid>
+参数:
+    pid: p站图片id
+用例:
+    pid 12345678
+""".strip()
+
 
 class Pid(Service):
     name = "Pid"
+    doc = doc
 
 
 class PidCore(ServiceBehavior[Pid], IMessageFilter):

@@ -28,7 +28,7 @@ urllist_1 = [
 
 
 class RandomArt(Service):
-    pass
+    name = "随机图片"
 
 
 class RandomArtCore(ServiceBehavior[RandomArt], IMessageFilter):

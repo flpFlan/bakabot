@@ -12,8 +12,15 @@ from utils.request import Request
 url = "https://raw.githubusercontent.com/Nthily/KFC-Crazy-Thursday/main/kfc.json"
 url2 = "https://gitee.com/Nicr0n/fucking_crazy_thursday/raw/master/post.json"
 
+doc = """
+用例:
+    疯狂星期四文案生成
+""".strip()
+
 
 class KFC(Service):
+    doc = doc
+
     async def __setup(self):
         self.texts = await self.get_texts()
 

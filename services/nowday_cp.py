@@ -15,9 +15,18 @@ from utils.wrapper import Scheduled
 
 # -- code --
 
+doc = """
+格式:
+    jrcp/今日cp/今日CP
+    /cp <text>
+用例:
+    /cp 今天好高兴啊
+""".strip()
+
 
 class NowdayCP(Service):
     name = "今日CP"
+    doc = doc
 
     async def __setup(self):
         await ACCIO.db.execute(

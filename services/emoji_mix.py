@@ -17,9 +17,19 @@ from cqhttp.cqcode import Image
 emojis = sorted(emoji.EMOJI_DATA, key=len, reverse=True)
 pattern = "(" + "|".join(re.escape(u) for u in emojis) + ")"
 
+doc = """
+格式:
+    emoji合成 <emoji><emoji>
+参数:
+    emoji: emoji表情, 不支持QQ表情
+用例:
+    emoji合成🥵🥵
+""".strip()
+
 
 class EmojiMix(Service):
-    pass
+    name = "emoji合成"
+    doc = doc
 
 
 class EmojiError(Exception):

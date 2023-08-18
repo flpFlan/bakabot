@@ -13,7 +13,7 @@ from cqhttp.cqcode import Image
 
 
 class Sponsor(Service):
-    name = "赞助"
+    pass
 
 
 class SponsorCore(ServiceBehavior[Sponsor]):

@@ -11,8 +11,20 @@ from utils.request import Request
 # -- code --
 url = "https://raw.githubusercontent.com/xipesoy/zhenxun_plugin_meiriyiju/main/resource/post.json"
 
+doc = """
+格式:
+    发电 <name>
+参数:
+    name: 名字
+用例:
+    发电 阿咪
+""".strip()
+
 
 class BarberShop(Service):
+    name = "发电"
+    doc = doc
+
     async def __setup(self):
         self.words = await self.get_words()
 

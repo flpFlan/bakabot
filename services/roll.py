@@ -11,7 +11,7 @@ from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 
 class Roll(Service):
     name = "Roll点"
-    descrition = "食用方法：.r + 骰的面数几个数，可选，默认为1d100\n"
+    doc = "食用方法：.r + 骰的面数几个数，可选，默认为1d100\n"
     "例：.r 1d100+1d20+1d10+1d6+1d4+1d3+1d2"
 
 

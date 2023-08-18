@@ -1,5 +1,6 @@
 # -- stdlib --
 import asyncio, logging
+from logging.handlers import RotatingFileHandler
 import sys
 
 # -- own --
@@ -8,13 +9,16 @@ from accio import ACCIO
 # -- code --
 logging.basicConfig(
     format="""
-    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    %(asctime)s - %(name)s - %(levelname)s
-    %(message)s
-    <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    """,
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+[%(asctime)s] - [%(name)s] - [%(levelname)s]
+%(message)s
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+""",
     level=logging.INFO,
-    handlers=[logging.StreamHandler(), logging.FileHandler("log.txt")],
+    handlers=[
+        logging.StreamHandler(),
+        RotatingFileHandler("bakabot.log", maxBytes=1024 * 1024 * 5, backupCount=3),
+    ],
 )
 
 

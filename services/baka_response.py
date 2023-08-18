@@ -11,7 +11,7 @@ from utils.wrapper import cool_down_for
 
 
 class BakaResponse(Service):
-    pass
+    doc = """baka"""
 
 
 class BakaResponseCore(ServiceBehavior[BakaResponse], IMessageFilter):
