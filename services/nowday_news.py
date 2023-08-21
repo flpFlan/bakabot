@@ -23,12 +23,12 @@ class NowdayNewsCore(ServiceBehavior[NowdayNews]):
         if not evt.message == "读懂世界":
             return
         await self.get_everyday_news()
-        path = os.path.abspath(r".\src\temp\nowday_news_temp.png")
+        path = os.path.abspath("./src/temp/nowday_news_temp.png")
         await SendGroupMsg(evt.group_id, Image(f"file:///{path}")).do()
 
     async def get_everyday_news(self):
         url = "http://bjb.yunwj.top/php/tp/1.jpg"
-        with open(r".\src\temp\nowday_news_temp.png", "wb") as file:
+        with open("./src/temp/nowday_news_temp.png", "wb") as file:
             async for i in Request.get_iter_content(url):
                 file.write(i)
             file.close()

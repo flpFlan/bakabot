@@ -21,8 +21,8 @@ class SponsorCore(ServiceBehavior[Sponsor]):
     async def handle(self, evt: GroupMessage):
         if not evt.message == "赞助":
             return
-        webchat = os.path.abspath(r"src\sponsor\wechat.png")
-        alipay = os.path.abspath(r"src\sponsor\alipay.jpg")
+        webchat = os.path.abspath("./src/sponsor/wechat.png")
+        alipay = os.path.abspath("./src/sponsor/alipay.jpg")
         m = f"""
 Buy me a coffee :)
 

@@ -59,7 +59,7 @@ doc = """
     u_args: 用户参数
     lib: 链接库
     input: 输入
-示例:
+用例:
 /run python --input Hello World!
 print(input('echo: '))
 """.strip()

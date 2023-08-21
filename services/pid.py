@@ -61,7 +61,7 @@ class PidCore(ServiceBehavior[Pid], IMessageFilter):
         format = r.headers["Content-Type"].split("/")[1]
         if format == "html; charset=utf-8":
             return 0
-        path = f"src/temp/pid_temp.{format}"
+        path = f"./src/temp/pid_temp.{format}"
         with open(path, "wb") as file:
             for i in r.iter_content():
                 file.write(i)

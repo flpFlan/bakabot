@@ -162,6 +162,7 @@ class FriendAdded(Notice):
     user_id: int
 
 
+#FIXME
 @CQHTTPEvent.register
 class PrivatePoked(Notice):
     """好友戳一戳（双击头像）"""

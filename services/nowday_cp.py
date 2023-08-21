@@ -17,7 +17,8 @@ from utils.wrapper import Scheduled
 
 doc = """
 格式:
-    jrcp/今日cp/今日CP
+    jrcp
+    今日cp
     /cp <text>
 用例:
     /cp 今天好高兴啊

@@ -16,12 +16,12 @@ class Face(_FaceData, CQCode[_FaceData]):
 
 @dataclass(repr=False)
 class _RecordData(CQCodeData):
-    cq: ClassVar[str] = "record"
-    file: str = field()
-    url: str = field(init=False)
-    magic: int = field(default=0)
-    cache: int = field(default=1)
-    proxy: int = field(default=1)
+    cq: ClassVar[str]      = "record"
+    file: str              = field()
+    url: str               = field(init=False)
+    magic: Optional[int]   = field(default=None)
+    cache: int             = field(default=1)
+    proxy: Optional[int]   = field(default=None)
     timeout: Optional[int] = field(default=None)
 
 
@@ -33,8 +33,8 @@ class Record(_RecordData, CQCode[_RecordData]):
 @dataclass(repr=False)
 class _VideoData(CQCodeData):
     cq: ClassVar[str] = "video"
-    file: str = field()
-    cover: str = field()
+    file: str        = field()
+    cover: str       = field()
     c: Optional[int] = field(default=None)
 
 
@@ -46,7 +46,7 @@ class Video(_VideoData, CQCode[_VideoData]):
 @dataclass(repr=False)
 class _AtData(CQCodeData):
     cq: ClassVar[str] = "at"
-    qq: int = field()
+    qq: int   = field()
     name: str = field(init=False)
 
 
@@ -87,7 +87,7 @@ class Shake(_ShakeData, CQCode[_ShakeData]):
 
 @dataclass(repr=False)
 class _AnonymousData(CQCodeData):
-    cq: ClassVar[str] = "anonymous"
+    cq: ClassVar[str]     = "anonymous"
     ignore: Optional[int] = field(default=None)
 
 
@@ -98,11 +98,11 @@ class Anonymous(_AnonymousData, CQCode[_AnonymousData]):
 
 @dataclass(repr=False)
 class _ShareData(CQCodeData):
-    cq: ClassVar[str] = "share"
-    url: str = field()
-    title: str = field()
+    cq: ClassVar[str]      = "share"
+    url: str               = field()
+    title: str             = field()
     content: Optional[str] = field(default=None)
-    image: Optional[str] = field(default=None)
+    image: Optional[str]   = field(default=None)
 
 
 @register_to_cqcodes
@@ -113,8 +113,8 @@ class Share(_ShareData, CQCode[_ShareData]):
 @dataclass(repr=False)
 class _ContactData(CQCodeData):
     cq: ClassVar[str] = "contact"
-    type: str = field()
-    id: str = field()
+    type: str         = field()
+    id: str           = field()
 
 
 @register_to_cqcodes
@@ -124,10 +124,10 @@ class Contact(_ContactData, CQCode[_ContactData]):
 
 @dataclass(repr=False)
 class _LocationData(CQCodeData):
-    cq: ClassVar[str] = "location"
-    lat: str = field()
-    lon: str = field()
-    title: Optional[str] = field(default=None)
+    cq: ClassVar[str]      = "location"
+    lat: str               = field()
+    lon: str               = field()
+    title: Optional[str]   = field(default=None)
     content: Optional[str] = field(default=None)
 
 
@@ -139,8 +139,8 @@ class Location(_LocationData, CQCode[_LocationData]):
 @dataclass(repr=False)
 class _MusicData(CQCodeData):
     cq: ClassVar[str] = "music"
-    type: str = field()
-    id: int = field()
+    type: str         = field()
+    id: int           = field()
 
 
 @register_to_cqcodes
@@ -150,13 +150,13 @@ class Music(_MusicData, CQCode[_MusicData]):
 
 @dataclass(repr=False)
 class _MusicCustomData(CQCodeData):
-    cq: ClassVar[str] = "music"
-    url: str = field()
-    audio: str = field()
-    title: str = field()
+    cq: ClassVar[str]      = "music"
+    url: str               = field()
+    audio: str             = field()
+    title: str             = field()
     content: Optional[str] = field(default=None)
-    image: Optional[str] = field(default=None)
-    type: str = field(default="custom")
+    image: Optional[str]   = field(default=None)
+    type: str              = field(default="custom")
 
 
 @register_to_cqcodes
@@ -166,14 +166,14 @@ class MusicCustom(_MusicCustomData, CQCode[_MusicCustomData]):
 
 @dataclass(repr=False)
 class _ImageData(CQCodeData):
-    cq: ClassVar[str] = "image"
-    file: str = field()
-    type: Optional[str] = field(default=None)
+    cq: ClassVar[str]      = "image"
+    file: str              = field()
+    type: Optional[str]    = field(default=None)
     subType: Optional[int] = field(default=None)
-    url: Optional[str] = field(default=None)
-    cache: int = field(default=1)
-    id: Optional[int] = field(default=None)
-    c: Optional[int] = field(default=None)
+    url: Optional[str]     = field(default=None)
+    cache: int             = field(default=1)
+    id: Optional[int]      = field(default=None)
+    c: Optional[int]       = field(default=None)
 
 
 @register_to_cqcodes
@@ -183,8 +183,8 @@ class Image(_ImageData, CQCode[_ImageData]):
 
 @dataclass(repr=False)
 class _ReplyData(CQCodeData):
-    cq: ClassVar[str] = "reply"
-    id: int = field()
+    cq: ClassVar[str]  = "reply"
+    id: int            = field()
     seq: Optional[int] = field(default=None)
 
 
@@ -195,10 +195,10 @@ class Reply(_ReplyData, CQCode[_ReplyData]):
 
 @dataclass(repr=False)
 class _ReplyCustomData(CQCodeData):
-    cq: ClassVar[str] = "reply"
-    text: str = field()
-    qq: int = field()
-    time: int = field()
+    cq: ClassVar[str]  = "reply"
+    text: str          = field()
+    qq: int            = field()
+    time: int          = field()
     seq: Optional[int] = field(default=None)
 
 
@@ -210,7 +210,7 @@ class ReplyCustom(_ReplyCustomData, CQCode[_ReplyCustomData]):
 @dataclass(repr=False)
 class _RedBagData(CQCodeData):
     cq: ClassVar[str] = "redbag"
-    title: str = field()
+    title: str        = field()
 
 
 @register_to_cqcodes
@@ -221,7 +221,7 @@ class RedBag(_RedBagData, CQCode[_RedBagData]):
 @dataclass(repr=False)
 class _PokeData(CQCodeData):
     cq: ClassVar[str] = "poke"
-    qq: int = field()
+    qq: int           = field()
 
 
 @register_to_cqcodes
@@ -232,8 +232,8 @@ class Poke(_PokeData, CQCode[_PokeData]):
 @dataclass(repr=False)
 class _GiftData(CQCodeData):
     cq: ClassVar[str] = "gift"
-    qq: int = field()
-    id: int = field()
+    qq: int           = field()
+    id: int           = field()
 
 
 @register_to_cqcodes
@@ -244,7 +244,7 @@ class Gift(_GiftData, CQCode[_GiftData]):
 @dataclass(repr=False)
 class _ForwardData(CQCodeData):
     cq: ClassVar[str] = "forward"
-    id: str = field()
+    id: str           = field()
 
 
 @register_to_cqcodes
@@ -255,7 +255,7 @@ class Forward(_ForwardData, CQCode[_ForwardData]):
 @dataclass(repr=False)
 class _NodeData(CQCodeData):
     cq: ClassVar[str] = "node"
-    id: int = field()
+    id: int           = field()
 
 
 @register_to_cqcodes
@@ -265,11 +265,11 @@ class Node(_NodeData, CQCode[_NodeData]):
 
 @dataclass(repr=False)
 class _NodeCustomData(CQCodeData):
-    cq: ClassVar[str] = "node"
-    name: str = field()
-    uin: int = field()
+    cq: ClassVar[str]      = "node"
+    name: str              = field()
+    uin: int               = field()
     content: Optional[str] = field(default=None)
-    seq: Optional[str] = field(default=None)
+    seq: Optional[str]     = field(default=None)
 
 
 @register_to_cqcodes
@@ -279,8 +279,8 @@ class NodeCustom(_NodeCustomData, CQCode[_NodeCustomData]):
 
 @dataclass(repr=False)
 class _XMLData(CQCodeData):
-    cq: ClassVar[str] = "xml"
-    data: str = field()
+    cq: ClassVar[str]    = "xml"
+    data: str            = field()
     resid: Optional[int] = field(default=None)
 
 
@@ -291,8 +291,8 @@ class XML(_XMLData, CQCode[_XMLData]):
 
 @dataclass(repr=False)
 class _JsonData(CQCodeData):
-    cq: ClassVar[str] = "json"
-    data: str = field()
+    cq: ClassVar[str]    = "json"
+    data: str            = field()
     resid: Optional[int] = field(default=None)
 
 
@@ -303,14 +303,14 @@ class Json(_JsonData, CQCode[_JsonData]):
 
 @dataclass(repr=False)
 class _CardImageData(CQCodeData):
-    cq: ClassVar[str] = "cardimage"
-    file: str = field()
-    minwidth: Optional[int] = field(default=None)
+    cq: ClassVar[str]        = "cardimage"
+    file: str                = field()
+    minwidth: Optional[int]  = field(default=None)
     minheight: Optional[int] = field(default=None)
-    maxwidth: Optional[int] = field(default=None)
+    maxwidth: Optional[int]  = field(default=None)
     maxheight: Optional[int] = field(default=None)
-    source: Optional[str] = field(default=None)
-    icon: Optional[str] = field(default=None)
+    source: Optional[str]    = field(default=None)
+    icon: Optional[str]      = field(default=None)
 
 
 @register_to_cqcodes
@@ -321,7 +321,7 @@ class CardImage(_CardImageData, CQCode[_CardImageData]):
 @dataclass(repr=False)
 class _TTSData(CQCodeData):
     cq: ClassVar[str] = "tts"
-    text: str = field()
+    text: str         = field()
 
 
 @register_to_cqcodes

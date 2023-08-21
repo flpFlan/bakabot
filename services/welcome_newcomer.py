@@ -24,7 +24,7 @@ class WelcomeNewcomerCore(ServiceBehavior[WelcomeNewcomer]):
             return
         if evt.group_id not in whitelist:
             return
-        path = os.path.abspath("src/BAKA.gif")
+        path = os.path.abspath("./src/BAKA.gif")
         m = f"{At(evt.user_id)}\n欢迎新人!{Image(f'file:///{path}')}"
 
         await SendGroupMsg(evt.group_id, m).do()

@@ -16,7 +16,7 @@ class MessageFailedEchoCore(ServiceBehavior[MessageFailedEcho]):
     @OnEvent[SendGroupMsg, SendMsg].after_post().add_listener
     async def handle(self, evt: SendGroupMsg | SendMsg, args: R1 | R2):
         if isinstance(evt, SendMsg):
-            if not getattr(evt, "group_id", None):
+            if not hasattr(evt, "group_id"):
                 return
         if not args["status"] == "failed":
             return

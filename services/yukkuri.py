@@ -58,13 +58,13 @@ class YukkuriCore(ServiceBehavior[Yukkuri], IMessageFilter):
                 await SendGroupMsg(group_id, "超出字数限制").do()
                 return
             await self.get_yukkuri(content, sub_type=TYPE.get(type, "") or type)
-            path = os.path.abspath(r"src\temp\yukkuri_temp.mp3")
+            path = os.path.abspath("./src/temp/yukkuri_temp.mp3")
             await SendGroupMsg(group_id, Record(f"file:///{path}")).do()
 
     async def get_yukkuri(self, text, type=1, sub_type="f1"):
         text = quote(text)
         url = f"https://www.yukumo.net/api/v2/aqtk{type}/koe.mp3?type={sub_type}&kanji={text}"
-        with open(r".\src\temp\yukkuri_temp.mp3", "wb") as file:
+        with open("./src/temp/yukkuri_temp.mp3", "wb") as file:
             async for i in Request.get_iter_content(url):
                 file.write(i)
             file.close()
@@ -84,7 +84,7 @@ class YukkuriCore(ServiceBehavior[Yukkuri], IMessageFilter):
     def filt_html(self, html):
         soup = BeautifulSoup(html, features="html.parser")
         result = soup.find("div", class_="finalresult")
-        result = result.find_all(text=True)  # type: ignore
+        result = result.find_all(text=True)
         final_result = ""
         for i in result:
             if i.startswith("(") and i.endswith(")"):

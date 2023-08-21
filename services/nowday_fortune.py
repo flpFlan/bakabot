@@ -94,7 +94,7 @@ class NowdayFortuneCore(ServiceBehavior[NowdayFortune]):
         work = int(normal(exp[fortune], 20))
         await self.service.add(qq_number, fortune, money, love, work)
 
-        path = os.path.abspath(f"src/fortune/{fortune}.png")
+        path = os.path.abspath(f"./src/fortune/{fortune}.png")
         m = f"{At(qq_number)}\n运势：{fortune}\n爱情运：{love}\n财运：{money}\n事业运：{work}{Image(f'file:///{path}')}"
 
         await SendGroupMsg(evt.group_id, m).do()

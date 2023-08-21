@@ -100,8 +100,7 @@ class Bot:
 
         for s in self.services:
             await db.execute(
-                "select ifnull((select service_on from services where service = ?),true)",
-                (s.__class__.__name__,),
+                f"select ifnull((select service_on from services where service = '{s.__class__.__name__}'), true)",
             )
             state = await db.fatchone()
             if state and state[0]:

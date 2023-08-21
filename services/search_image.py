@@ -33,7 +33,7 @@ class SearchImageCore(ServiceBehavior[SearchImage], IMessageFilter):
         else:
             try:
                 await self.search(tag)
-                path = os.path.abspath(r".\src\temp\search_img_temp.jpg")
+                path = os.path.abspath("./src/temp/search_img_temp.jpg")
                 m = f"{Image(f'file:///{path}')}"
             except requests.ConnectTimeout:
                 m = "请求超时(Ｔ▽Ｔ)"

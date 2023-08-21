@@ -17,7 +17,7 @@ logging.basicConfig(
     level=logging.INFO,
     handlers=[
         logging.StreamHandler(),
-        RotatingFileHandler("bakabot.log", maxBytes=1024 * 1024 * 5, backupCount=3),
+        # RotatingFileHandler("bakabot.log", maxBytes=1024 * 1024 * 5, backupCount=3),
     ],
 )
 
