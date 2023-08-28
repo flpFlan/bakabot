@@ -36,5 +36,12 @@ async def start_bot():
 
 
 if __name__ == "__main__":
-    with asyncio.Runner() as runner:
+    try:
+        import uvloop
+
+        loop = uvloop.new_event_loop()
+    except ImportError:
+        loop = None
+        
+    with asyncio.Runner(loop_factory=loop) as runner:
         runner.run(start_bot())
