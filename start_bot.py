@@ -24,7 +24,7 @@ logging.basicConfig(
 
 async def start_bot():
     bot = ACCIO.bot
-    await bot.setup()
+    await bot.install_services()
     # import argparse
 
     # parser = argparse.ArgumentParser(prog=sys.argv[0])
@@ -32,6 +32,8 @@ async def start_bot():
     # parser.add_argument("--port", default="2333", type=int)
     # options = parser.parse_args()
 
+    import logging
+    logging.getLogger("bot").info(f"{ACCIO.bot.name} start up!")
     await bot.run_forever()
 
 
@@ -42,6 +44,6 @@ if __name__ == "__main__":
         loop = uvloop.new_event_loop()
     except ImportError:
         loop = None
-        
+
     with asyncio.Runner(loop_factory=loop) as runner:
         runner.run(start_bot())

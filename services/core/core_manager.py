@@ -3,12 +3,15 @@ import logging
 from typing import ClassVar, Self
 
 # -- third party --
+from sqlalchemy import select, insert, delete
+
 # -- own --
 from .base import CoreService
 from services.base import ServiceBehavior, IMessageFilter, OnEvent
 from cqhttp.events import CQHTTPEvent
 from cqhttp.events.message import GroupMessage
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
+from db.models.service import BlockGroup as BlockGroupsModel
 from accio import ACCIO
 
 # -- code --
@@ -110,9 +113,6 @@ class BlockGroup(ServiceBehavior[CoreManager]):
     instance: ClassVar[Self]
 
     async def __setup(self):
-        await ACCIO.db.execute(
-            "create table if not exists blockgroups (group_id integer unique)"
-        )
         self.blockgroups = await self.get()
         self.__class__.instance = self
 
@@ -123,18 +123,20 @@ class BlockGroup(ServiceBehavior[CoreManager]):
                 evt.cancel()
 
     async def get(self) -> set[int]:
-        await ACCIO.db.execute("select group_id from blockgroups")
-        result = await ACCIO.db.fatchall()
-        return set(group[0] for group in result)
+        session=ACCIO.db.session
+        async with session.begin():
+            result = await session.scalars(select(BlockGroupsModel.group_id))
+            return set(result)
 
     async def add(self, group_id: int):
         blockgroups = self.blockgroups
         if group_id in blockgroups:
             log.warning("try to add group_id already exist")
             return
-        await ACCIO.db.execute(
-            "insert into blockgroups (group_id) values (?)", (group_id,)
-        )
+        session = ACCIO.db.session
+
+        async with session.begin():
+            session.add(BlockGroupsModel(group_id=group_id))
         blockgroups.add(group_id)
 
     async def delete(self, group_id: int):
@@ -142,7 +144,8 @@ class BlockGroup(ServiceBehavior[CoreManager]):
         if group_id not in blockgroups:
             log.warning("try to delete group_id not exist")
             return
-        await ACCIO.db.execute(
-            "delete from blockgroups where group_id = ?", (group_id,)
-        )
+        session = ACCIO.db.session
+
+        async with session.begin():
+            await session.execute(delete(BlockGroupsModel).where(BlockGroupsModel.group_id == group_id))
         blockgroups.remove(group_id)

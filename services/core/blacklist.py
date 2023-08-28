@@ -2,6 +2,8 @@
 import logging
 
 # -- third party --
+from sqlalchemy import select, insert, delete
+
 # -- own --
 from .base import CoreService
 from services.base import ServiceBehavior, OnEvent, IMessageFilter
@@ -9,6 +11,7 @@ from cqhttp.events.base import CQHTTPEvent
 from cqhttp.events.message import GroupMessage, Message
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.api.message.SendPrivateMsg import SendPrivateMsg
+from db.models.service import BlackList as BlackListModel
 from accio import ACCIO
 
 # -- code --
@@ -17,36 +20,30 @@ blacklist: set[int] = set()
 
 
 class BlackList(CoreService):
-    async def __setup(self):
-        await ACCIO.db.execute(
-            "create table if not exists blacklist (qq_number integer unique)"
-        )
 
     async def get(self) -> set[int]:
-        db = ACCIO.db
-        await db.execute("select qq_number from blacklist")
-        result = await db.fatchall()
-        await db.commit()
-        return set(group[0] for group in result)
+        async with ACCIO.db.session.begin():
+            result = (await ACCIO.db.session.scalars(select(BlackListModel.qq_number))).all()
+        return set(r for r in result)
 
     async def add(self, qq_number: int):
         if qq_number in blacklist:
             log.warning("try to add group_id already exist")
             return
-        db = ACCIO.db
+        session = ACCIO.db.session
 
-        await db.execute(
-            f"insert into blacklist (qq_number) values (?)",
-            (qq_number,),
-        )
-        await db.commit()
+        async with session.begin():
+            session.add(BlackListModel(qq_number=qq_number))
         blacklist.add(qq_number)
 
     async def delete(self, qq_number: int):
         if qq_number not in blacklist:
             log.warning("try to delete qq_number not exist")
             return
-        await ACCIO.db.execute("delete from blacklist where qq_number = ?", (qq_number,))
+        session = ACCIO.db.session
+
+        async with session.begin():
+            await session.execute(delete(BlackListModel).where(BlackListModel.qq_number == qq_number))
         blacklist.remove(qq_number)
 
 

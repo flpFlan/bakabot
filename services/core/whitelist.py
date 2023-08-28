@@ -10,7 +10,11 @@ from cqhttp.events.message import GroupMessage
 from cqhttp.events.notice import GroupMemberBanned
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.api.group_operation.SetGroupLeave import SetGroupLeave
+from db.models.service import WhiteList as WhiteListModel
 from accio import ACCIO
+
+# -- third party --
+from sqlalchemy import select, insert, delete
 
 # -- code --
 log = logging.getLogger("bot.service.whitelist")
@@ -22,29 +26,34 @@ class WhiteList(CoreService):
 
     async def __setup(self):
         WhiteList.instance = self
-        await ACCIO.db.execute(
-            "create table if not exists whitelist (group_id integer unique)"
-        )
 
     async def get(self) -> set[int]:
-        await ACCIO.db.execute("select group_id from whitelist")
-        result = await ACCIO.db.fatchall()
-        return set(group[0] for group in result)
+        session = ACCIO.db.session
+        async with session.begin():
+            result = await session.scalars(select(WhiteListModel.group_id))
+            return set(result)
 
     async def add(self, group_id: int):
         if group_id in whitelist:
             log.warning("try to add group_id already exist")
             return
-        await ACCIO.db.execute(
-            "insert into whitelist (group_id) values (?)", (group_id,)
-        )
+        session = ACCIO.db.session
+
+        async with session.begin():
+            session.add(WhiteListModel(group_id=group_id))
         whitelist.add(group_id)
 
     async def delete(self, group_id: int):
         if group_id not in whitelist:
             log.warning("try to delete group_id not exist")
             return
-        await ACCIO.db.execute("delete from whitelist where group_id = ?", (group_id,))
+        session = ACCIO.db.session
+
+        async with session.begin():
+            await session.execute(
+                delete(WhiteListModel).where(WhiteListModel.group_id == group_id)
+            )
+            await session.commit()
         whitelist.remove(group_id)
 
 

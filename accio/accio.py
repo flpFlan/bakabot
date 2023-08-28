@@ -8,11 +8,19 @@ from configparser import ConfigParser
 class Accio:
     __slots__ = ("bot", "db", "conf")
 
-    def __init__(self):
-        # config
+    def load_config(self):
         conf = ConfigParser()
         conf.read("config.ini")
         self.conf = conf
+        return conf
+
+    def setup(self):
+        conf = self.load_config()
+        # src
+        import os
+        
+        if not os.path.exists("src/temp"):
+            os.makedirs("src/temp")
 
         # bot
         from bot import Bot
@@ -22,7 +30,6 @@ class Accio:
         self.bot = Bot(name, qq)
 
         # database
-        from db.database import DataBase
+        from db.base import DataBase
 
         self.db = DataBase()
-        self.db.set_bot(self.bot)

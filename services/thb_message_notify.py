@@ -6,11 +6,13 @@ from typing import cast
 
 # -- third party --
 import redis.asyncio as redis
+from sqlalchemy import select, delete
 
 # -- own --
 from services.base import Service, ServiceBehavior
 from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from accio import ACCIO
+from db.models import NotifyGroup
 
 
 # -- code --
@@ -29,32 +31,30 @@ ServerNames = {
 
 class THBMessageNotify(Service):
     async def __setup(self):
-        await ACCIO.db.execute(
-            "create table if not exists thb_notify_groups (group_id integer unique)"
-        )
         self.thb_notify_groups = await self.get_notify_group()
 
     async def get_notify_group(self) -> set[int]:
-        await ACCIO.db.execute("select group_id from thb_notify_groups")
-        result = await ACCIO.db.fatchall()
-        return set(group[0] for group in result)
+        session = ACCIO.db.session
+        async with session.begin():
+            rslt = (await session.scalars(select(NotifyGroup.group_id))).all()
+            return set(rslt)
 
     async def add_notify_group(self, group_id: int):
         if group_id in self.thb_notify_groups:
             return
-
-        await ACCIO.db.execute(
-            f"insert into thb_notify_groups (group_id) values (?)",
-            (group_id,),
-        )
+        session = ACCIO.db.session
+        async with session.begin():
+            session.add(NotifyGroup(group_id=group_id))
         self.thb_notify_groups.add(group_id)
 
     async def del_notify_group(self, group_id: int):
         if group_id not in self.thb_notify_groups:
             return
-        await ACCIO.db.execute(
-            "delete from thb_notify_groups where group_id = ?", (group_id,)
-        )
+        session = ACCIO.db.session
+        async with session.begin():
+            await session.execute(
+                delete(NotifyGroup).where(NotifyGroup.group_id == group_id)
+            )
         self.thb_notify_groups.remove(group_id)
 
 

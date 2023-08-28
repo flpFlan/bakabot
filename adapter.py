@@ -5,10 +5,12 @@ from typing import Optional, TypeVar, TYPE_CHECKING
 
 # -- third party --
 from websockets.client import connect
+from websockets.exceptions import ConnectionClosed
 
 # -- own --
 from cqhttp.events.base import CQHTTPEvent
 from cqhttp.cqcode.base import CQCode
+from accio import ACCIO
 
 # -- code --
 if TYPE_CHECKING:
@@ -28,24 +30,27 @@ class Encoder(json.JSONEncoder):
 
 class CQHTTPAdapter:
     def __init__(self):
-        from accio import ACCIO
-
         endpoint = ACCIO.conf.get("Bot.Adapter", "endpoint")
         self.host, self.port = endpoint.split(":")
 
     async def run(self):
-        from accio import ACCIO
-
         async for conn in connect(
             f"ws://{self.host}:{self.port}/event", ping_timeout=None
         ):
-            self.api_conn = await connect(
-                f"ws://{self.host}:{self.port}/api", ping_timeout=None
-            )
-            self.api_lock = asyncio.Lock()
-            self.event_conn = conn
-            await ACCIO.bot.behavior.evt_loop()
-            await self.api_conn.close()
+            try:
+                self.api_conn = await connect(
+                    f"ws://{self.host}:{self.port}/api", ping_timeout=None
+                )
+                self.api_lock = asyncio.Lock()
+                self.event_conn = conn
+                await ACCIO.bot.behavior.evt_loop()
+                await self.api_conn.close()
+            except ConnectionClosed:
+                log.warning("connection with cqhttp shutdown")
+                if input("would you like to try again?[yes/no]").lower() in ("yes", "y"):
+                    continue
+                else:
+                    return
 
     async def rev_raw(self):
         return await self.event_conn.recv()

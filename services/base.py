@@ -14,6 +14,10 @@ from accio import ACCIO
 from cqhttp.api.base import ApiAction, ResponseBase
 from cqhttp.events.base import CQHTTPEvent
 from utils.core_event import CoreEvent
+from db.models.core import Service as ServiceModel
+
+# -- third party --
+from sqlalchemy import update
 
 # -- code --
 
@@ -93,14 +97,10 @@ class Service:
         self._behaviors.append(behavior)
 
     async def start(self):
-        db = ACCIO.db
-        service = self.__class__.__name__
-        await db.execute(
-            """
-            insert or replace into services (service,service_on) values (?,?)
-            """,
-            (service, True),
-        )
+        session = ACCIO.db.session
+        async with session.begin():
+            if rslt := (await session.get(ServiceModel, self.__class__.__name__)):
+                rslt.service_on = True 
         for bhv in self._behaviors:
             bhv.set_activity(True)
 
@@ -109,10 +109,10 @@ class Service:
 
     async def shutdown(self):
         await self.OnBeforeShutDown.invoke()
-        await ACCIO.db.execute(
-            "insert or replace into services (service,service_on) values (?,?)",
-            (self.__class__.__name__, False),
-        )
+        session = ACCIO.db.session
+        async with session.begin():
+            if rslt := await session.get(ServiceModel, self.__class__.__name__):
+                rslt.service_on = False
         for bhv in self._behaviors:
             bhv.set_activity(False)
         self._active = False
@@ -216,8 +216,8 @@ class ServiceBehavior(Generic[_TService]):
                     t = [asyncio.create_task(f(e)) for f in fs]
             else:
                 assert arg
-                if fs := self._act_after_handlers.get(e.__class__): # type: ignore
-                    t = [asyncio.create_task(f(e, arg)) for f in fs] # type: ignore
+                if fs := self._act_after_handlers.get(e.__class__):  # type: ignore
+                    t = [asyncio.create_task(f(e, arg)) for f in fs]  # type: ignore
         if t:
             await asyncio.wait(t)
 

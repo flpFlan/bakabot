@@ -5,6 +5,7 @@ from typing import cast
 
 # -- third party --
 from numpy.random import normal
+from sqlalchemy import select, delete
 
 # -- own --
 from services.base import Service, ServiceBehavior, OnEvent
@@ -13,6 +14,7 @@ from cqhttp.api.message.SendGroupMsg import SendGroupMsg
 from cqhttp.cqcode import At, Image
 from accio import ACCIO
 from utils.wrapper import Scheduled
+from db.models import NowdayFortune as Model
 
 # -- code --
 exp = {"大吉": 96, "中吉": 80, "小吉": 64, "小凶": 48, "中凶": 32, "大凶": 16, "baka": 999}
@@ -22,39 +24,40 @@ class NowdayFortune(Service):
     name = "今日运势"
 
     async def __setup(self):
-        await ACCIO.db.execute(
-            "create table if not exists "
-            "nowday_fortune ("
-            "qq_number      integer primary key, "
-            "fortune        text, "
-            "money          integer, "
-            "love           integer, "
-            "work           integer "
-            ")"
-        )
         self.fortune_graph = await self.get()
 
-    async def get(self) -> dict[int, list[int | str]]:
-        await ACCIO.db.execute("select qq_number,fortune,money,love,work from nowday_fortune")
-        r = await ACCIO.db.fatchall()
-
-        return {l[0]: [l[1], l[2], l[3]] for l in r}
+    async def get(self) -> dict[int, tuple[str, int, int, int]]:
+        session = ACCIO.db.session
+        async with session.begin():
+            rslt = (await session.scalars(select(Model))).all()
+        return {l.qq_number: (l.fortune, l.money, l.love, l.work) for l in rslt}
 
     async def add(self, qq_number, fortune, money, love, work):
-        await ACCIO.db.execute(
-            "insert or replace into nowday_fortune (qq_number,fortune,money,love,work) values (?,?,?,?,?)",
-            (qq_number, fortune, money, love, work),
-        )
-        self.fortune_graph[qq_number] = [fortune, money, love, work]
+        session = ACCIO.db.session
+        async with session.begin():
+            await session.merge(
+                Model(
+                    qq_number=qq_number,
+                    fortune=fortune,
+                    money=money,
+                    love=love,
+                    work=work,
+                )
+            )
+        self.fortune_graph[qq_number] = (fortune, money, love, work)
 
     async def delete(self, qq_number):
         if not qq_number in self.fortune_graph:
             return
-        await ACCIO.db.execute("delete from nowday_fortune where qq_number = ?", (qq_number,))
+        session = ACCIO.db.session
+        async with session.begin():
+            await session.execute(delete(Model).where(Model.qq_number == qq_number))
         self.fortune_graph.pop(qq_number, None)
 
     async def clear(self):
-        await ACCIO.db.execute("delete from nowday_fortune")
+        session = ACCIO.db.session
+        async with session.begin():
+            await session.execute(delete(Model))
         self.fortune_graph.clear()
 
 

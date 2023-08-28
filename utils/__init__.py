@@ -40,7 +40,7 @@ class ChronosItem(Generic[T]):
 
             def callback_func():
                 object.__setattr__(self, __name, self.__default_value)
-                self._callback and self._callback()  # type: ignore
+                self._callback and self._callback()
                 self._t = self._start_time = None
 
             self._t = t = Timer(self.timeout, callback_func)

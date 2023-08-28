@@ -4,6 +4,8 @@ from collections import defaultdict
 from typing import ClassVar, Self
 
 # -- third party --
+from sqlalchemy import select, delete
+
 # -- own --
 from services.base import IMessageFilter, Service, ServiceBehavior, OnEvent
 from cqhttp.events.message import GroupMessage
@@ -12,6 +14,7 @@ from cqhttp.api.group_info.GetGroupMemberList import GetGroupMemberList
 from cqhttp.cqcode import At, Image
 from accio import ACCIO
 from utils.wrapper import Scheduled
+from db.models.service import NowdayCP as NowdayCPModel, CPWord as CPWordModel
 
 # -- code --
 
@@ -30,33 +33,26 @@ class NowdayCP(Service):
     doc = doc
 
     async def __setup(self):
-        await ACCIO.db.execute(
-            "create table if not exists "
-            "nowday_cp ("
-            "group_id  integer, "
-            "qq_number integer, "
-            "cp_qq     integer, "
-            "cp_name   text "
-            ")"
-        )
         self.cp_graph = await self.get()
 
     async def get(self) -> dict[int, dict[int, tuple[int, str]]]:
-        await ACCIO.db.execute(
-            "select group_id, qq_number, cp_qq, cp_name from nowday_cp"
-        )
-        r = await ACCIO.db.fatchall()
-        graph: defaultdict[int, dict] = defaultdict(dict)
-        for t in r:
-            graph[t[0]][t[1]] = (t[2], t[3])
+        graph: defaultdict[int, dict[int, tuple[int, str]]] = defaultdict(dict)
+        session = ACCIO.db.session
+        async with session.begin():
+            rslt = (await session.scalars(select(NowdayCPModel))).all()
+            for t in rslt:
+                graph[t.group_id][t.qq_number] = (t.cp_qq, t.cp_name)
 
         return graph
 
     async def add(self, group_id, qq_number, cp_qq, cp_name):
-        await ACCIO.db.execute(
-            "insert into nowday_cp (group_id, qq_number, cp_qq, cp_name) values (?,?,?,?)",
-            (group_id, qq_number, cp_qq, cp_name),
-        )
+        session = ACCIO.db.session
+        async with session.begin():
+            session.add(
+                NowdayCPModel(
+                    group_id=group_id, qq_number=qq_number, cp_qq=cp_qq, cp_name=cp_name
+                )
+            )
         self.cp_graph[group_id][qq_number] = (cp_qq, cp_name)
 
     async def delete(self, group_id, qq_number):
@@ -64,14 +60,21 @@ class NowdayCP(Service):
             return
         if not qq_number in self.cp_graph[group_id]:
             return
-        await ACCIO.db.execute(
-            "delete from nowday_cp where group_id = ? and qq_number = ?",
-            (group_id, qq_number),
-        )
+        session = ACCIO.db.session
+        async with session.begin():
+            await session.execute(
+                delete(NowdayCPModel).where(
+                    NowdayCPModel.qq_number == qq_number
+                    and NowdayCPModel.group_id == group_id
+                )
+            )
+
         self.cp_graph[group_id].pop(qq_number, None)
 
     async def clear(self):
-        await ACCIO.db.execute("delete from nowday_cp")
+        session = ACCIO.db.session
+        async with session.begin():
+            await session.execute(delete(NowdayCPModel))
         self.cp_graph.clear()
 
 
@@ -125,13 +128,6 @@ class CPWord(ServiceBehavior[NowdayCP], IMessageFilter):
 
     async def __setup(self):
         CPWord.instance = self
-        await ACCIO.db.execute(
-            "create table if not exists "
-            "cp_words  ("
-            "qq_number integer primary key, "
-            "word      text "
-            ")"
-        )
         self.words = await self.get()
 
     @OnEvent[GroupMessage].add_listener
@@ -147,23 +143,28 @@ class CPWord(ServiceBehavior[NowdayCP], IMessageFilter):
         await SendGroupMsg(evt.group_id, m).do()
 
     async def get(self) -> dict[int, str]:
-        await ACCIO.db.execute("select qq_number, word from cp_words")
-        r = await ACCIO.db.fatchall()
-        return {t[0]: t[1] for t in r}
+        session = ACCIO.db.session
+        async with session.begin():
+            rslt = (await session.scalars(select(CPWordModel))).all()
+            return {int(t.qq_number): str(t.word) for t in rslt}
 
     async def set(self, qq_number, word):
-        await ACCIO.db.execute(
-            "insert or replace into cp_words (qq_number, word) values (?,?)",
-            (qq_number, word),
-        )
+        session = ACCIO.db.session
+        async with session.begin():
+            await session.merge(NowdayCPModel(qq_number=qq_number, word=word))
         self.words[qq_number] = word
 
     async def delete(self, qq_number):
         if not qq_number in self.words:
             return
-        await ACCIO.db.execute("delete from cp_words where qq_number = ?", (qq_number,))
+        session = ACCIO.db.session
+        async with session.begin():
+            await session.execute(
+                delete(NowdayCPModel).where(NowdayCPModel.qq_number == qq_number)
+            )
         self.words.pop(qq_number, None)
 
     async def clear(self):
-        await ACCIO.db.execute("delete from cp_words")
+        await ACCIO.db.session.execute(delete(NowdayCPModel))
+        await ACCIO.db.session.commit()
         self.words.clear()
